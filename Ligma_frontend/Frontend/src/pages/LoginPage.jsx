@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState  } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
@@ -6,16 +6,17 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { BrandLockup } from "../components/ui/BrandMark";
 import { loginUser } from "../redux/authSlice";
-
+import { Eye, EyeOff } from "lucide-react";
 const schema = z.object({
   email: z.string().trim().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+password: z.string().min(1, "Password is required").transform((v) => v), // no auto-trim, keep as typed
 });
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const [showPassword, setShowPassword] = useState(false);
   const from = location.state?.from
     ? `${location.state.from.pathname}${location.state.from.search || ""}`
     : "/dashboard";
@@ -220,14 +221,25 @@ export default function LoginPage() {
               <label className="block text-xs font-semibold text-[color:var(--foreground-secondary)] mb-1.5">
                 Password
               </label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className="w-full h-10 px-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--foreground-muted)] outline-none focus:border-[color:var(--primary)] focus:ring-2 focus:ring-[color:var(--focus-ring)] transition-all disabled:opacity-50"
-                disabled={loading}
-                {...register("password")}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="w-full h-10 px-3 pr-10 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--foreground-muted)] outline-none focus:border-[color:var(--primary)] focus:ring-2 focus:ring-[color:var(--focus-ring)] transition-all disabled:opacity-50"
+                  disabled={loading}
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--foreground-muted)] hover:text-[color:var(--foreground)] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1.5 text-xs text-[color:var(--danger)]">
                   {errors.password.message}
