@@ -65,6 +65,7 @@ const login = async ({ email, password }) => {
   const user = await findUserByEmail(email);
 
   if (!user) {
+    logger.warn(`login: no user found for email="${email}"`);
     const error = new Error("Invalid email or password");
     error.statusCode = 401;
     throw error;
@@ -73,6 +74,7 @@ const login = async ({ email, password }) => {
   const passwordMatches = await bcrypt.compare(password, user.password);
 
   if (!passwordMatches) {
+    logger.warn(`login: password mismatch for userId=${user._id.toString()} email="${user.email}"`);
     const error = new Error("Invalid email or password");
     error.statusCode = 401;
     throw error;

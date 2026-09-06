@@ -21,7 +21,7 @@ const classifyWithOpenRouter = async (text, { strict = false } = {}) => {
       {
         model: config.OPENROUTER_MODEL,
         messages: [system, user],
-        max_tokens: 8,
+        max_tokens: 16,
         temperature: 0.0,
       },
       {
