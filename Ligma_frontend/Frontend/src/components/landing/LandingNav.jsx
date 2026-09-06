@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Menu, X } from "lucide-react";
+import { BrandLockup } from "../ui/BrandMark";
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
@@ -9,22 +10,6 @@ const NAV_LINKS = [
   { label: "Time Travel", href: "#time-travel" },
   { label: "Pricing", href: "#pricing" },
 ];
-
-/* Tiny connected-nodes brand mark */
-function BrandMark({ size = 28 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" aria-hidden="true">
-      <line x1="4" y1="4" x2="14" y2="14" className="brand-line" strokeWidth="1.5" />
-      <line x1="24" y1="4" x2="14" y2="14" className="brand-line" strokeWidth="1.5" />
-      <line x1="14" y1="14" x2="14" y2="24" className="brand-line" strokeWidth="1.5" />
-      <line x1="4" y1="4" x2="24" y2="4" className="brand-line" strokeWidth="1.5" />
-      <circle cx="4" cy="4" r="3" className="brand-node" />
-      <circle cx="24" cy="4" r="3" className="brand-node" />
-      <circle cx="14" cy="14" r="3.5" className="brand-node" />
-      <circle cx="14" cy="24" r="2.5" className="brand-node" />
-    </svg>
-  );
-}
 
 export default function LandingNav() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -60,12 +45,15 @@ export default function LandingNav() {
         left: 0,
         right: 0,
         zIndex: 1000,
-        transition: "background 250ms ease, box-shadow 250ms ease, border-color 250ms ease",
+        transition:
+          "background 250ms ease, box-shadow 250ms ease, border-color 250ms ease",
         background: scrolled
           ? "color-mix(in srgb, var(--background) 90%, transparent)"
           : "transparent",
         backdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? "1px solid var(--border)" : "1px solid transparent",
+        borderBottom: scrolled
+          ? "1px solid var(--border)"
+          : "1px solid transparent",
         boxShadow: scrolled ? "var(--shadow-sm)" : "none",
       }}
     >
@@ -84,20 +72,14 @@ export default function LandingNav() {
         {/* Logo */}
         <a
           href="/"
-          style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            textDecoration: "none",
+          }}
         >
-          <BrandMark size={28} />
-          <span
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontWeight: 700,
-              fontSize: 18,
-              letterSpacing: "-0.02em",
-              color: "var(--foreground)",
-            }}
-          >
-            Scrybe
-          </span>
+          <BrandLockup size="md" />
         </a>
 
         {/* Desktop nav links */}
@@ -155,7 +137,11 @@ export default function LandingNav() {
                 flexShrink: 0,
               }}
             >
-              {resolvedTheme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              {resolvedTheme === "dark" ? (
+                <Sun size={15} />
+              ) : (
+                <Moon size={15} />
+              )}
             </motion.button>
           )}
 
@@ -176,8 +162,12 @@ export default function LandingNav() {
               letterSpacing: "-0.01em",
               flexShrink: 0,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--primary-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--primary)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--primary-hover)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "var(--primary)")
+            }
           >
             Get Started Free
           </motion.a>

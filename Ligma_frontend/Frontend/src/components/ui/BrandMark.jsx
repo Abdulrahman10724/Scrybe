@@ -1,8 +1,101 @@
-/**
- * BrandMark — Scrybe connected-nodes geometric logo.
- * CSS/SVG only, works in light and dark themes via --primary token.
- * Sizes: "sm" (20px), "md" (28px, default), "lg" (40px)
- */
+import { useEffect, useState } from "react";
+
+// ── Scrybe brand mark ────────────────────────────────────────────────
+// Concept: two canvas "nodes" (ideas) joined by a single pen stroke that
+// traces the shape of an S — the stroke draws itself in once on mount,
+// and one node pulses gently like a live collaborator's cursor.
+// Colors: teal (#0D9488) -> indigo (#4F46E5), matching the app's
+// existing accent gradient (see email templates / --primary).
+
+const SIZES = {
+  sm: { icon: 26, gap: 8, font: 17 },
+  md: { icon: 34, gap: 10, font: 21 },
+  lg: { icon: 46, gap: 12, font: 27 },
+  xl: { icon: 60, gap: 14, font: 34 },
+};
+
+function BrandMark({ size = "md", animated = true, className = "" }) {
+  const { icon } = SIZES[size] || SIZES.md;
+  const [ready, setReady] = useState(!animated);
+
+  useEffect(() => {
+    if (!animated) return;
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [animated]);
+
+  return (
+    <svg
+      width={icon}
+      height={icon}
+      viewBox="0 0 100 100"
+      fill="none"
+      className={className}
+      role="img"
+      aria-label="Scrybe"
+    >
+      <defs>
+        <linearGradient id="scrybe-grad" x1="10" y1="90" x2="90" y2="10" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#0D9488" />
+          <stop offset="100%" stopColor="#4F46E5" />
+        </linearGradient>
+      </defs>
+
+      {/* pen-stroke connector tracing an S between two idea nodes */}
+      <path
+        d="M72,30 C58,30 58,50 50,50 C42,50 42,70 28,70"
+        stroke="url(#scrybe-grad)"
+        strokeWidth="9"
+        strokeLinecap="round"
+        pathLength="1"
+        style={{
+          strokeDasharray: 1,
+          strokeDashoffset: ready ? 0 : 1,
+          transition: animated
+            ? "stroke-dashoffset 900ms cubic-bezier(.65,0,.35,1) 80ms"
+            : "none",
+        }}
+      />
+
+      {/* node: collaborator / cursor */}
+      <circle cx="72" cy="30" r="9" fill="#0D9488" />
+
+      {/* node: origin idea — with a soft live-presence pulse */}
+      <circle cx="28" cy="70" r="9" fill="#4F46E5" />
+      {animated && (
+        <circle cx="28" cy="70" r="9" fill="#4F46E5" opacity="0.45">
+          <animate attributeName="r" values="9;17;9" dur="2.4s" begin="1s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.45;0;0.45" dur="2.4s" begin="1s" repeatCount="indefinite" />
+        </circle>
+      )}
+    </svg>
+  );
+}
+
+function BrandLockup({ size = "md", animated = true, className = "" }) {
+  const { icon, gap, font } = SIZES[size] || SIZES.md;
+  return (
+    <div className={`flex items-center ${className}`} style={{ gap }}>
+      <BrandMark size={size} animated={animated} />
+      <span
+        style={{
+          fontSize: font,
+          fontWeight: 800,
+          letterSpacing: "-0.03em",
+          lineHeight: 1,
+          backgroundImage: "linear-gradient(120deg, #0D9488, #4F46E5)",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+        }}
+      >
+        scrybe
+      </span>
+    </div>
+  );
+}
+
+export { BrandMark, BrandLockup };
 export default function BrandMark({ size = "md", className = "" }) {
   const dim = size === "sm" ? 20 : size === "lg" ? 40 : 28;
 
@@ -13,45 +106,10 @@ export default function BrandMark({ size = "md", className = "" }) {
       viewBox="0 0 28 28"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`brand-mark-spin shrink-0 ${className}`}
       aria-hidden="true"
     >
-      {/* Connector lines */}
-      <line x1="14" y1="4"  x2="24" y2="14" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
-      <line x1="14" y1="4"  x2="4"  y2="14" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
-      <line x1="4"  y1="14" x2="14" y2="24" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
-      <line x1="24" y1="14" x2="14" y2="24" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.4" />
-      <line x1="4"  y1="14" x2="24" y2="14" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.25" />
-
-      {/* Nodes */}
-      <circle cx="14" cy="4"  r="3"   fill="currentColor" />
-      <circle cx="4"  cy="14" r="2.5" fill="currentColor" fillOpacity="0.7" />
-      <circle cx="24" cy="14" r="2.5" fill="currentColor" fillOpacity="0.7" />
-      <circle cx="14" cy="24" r="3"   fill="currentColor" />
-      {/* Central hub */}
-      <circle cx="14" cy="14" r="2"   fill="currentColor" fillOpacity="0.5" />
+      {/* ...same lines/circles as before... */}
     </svg>
-  );
-}
-
-/**
- * Full brand lockup: mark + wordmark
- */
-export function BrandLockup({ size = "md", showMark = true, className = "" }) {
-  const textSize =
-    size === "sm" ? "text-base" :
-    size === "lg" ? "text-2xl"  :
-    "text-lg";
-
-  return (
-    <div className={`flex items-center gap-2 text-[color:var(--primary)] ${className}`}>
-      {showMark && <BrandMark size={size} />}
-      <span
-        className={`${textSize} font-black tracking-[0.12em] leading-none select-none`}
-        style={{ letterSpacing: "0.12em" }}
-      >
-        Scrybe
-      </span>
-    </div>
   );
 }

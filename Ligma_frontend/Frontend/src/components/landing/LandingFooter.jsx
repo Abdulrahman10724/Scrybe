@@ -1,21 +1,8 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, ExternalLink } from "lucide-react";
+import { BrandLockup } from "../ui/BrandMark";
 
-function BrandMark({ size = 24 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" aria-hidden="true">
-      <line x1="4" y1="4" x2="14" y2="14" className="brand-line" strokeWidth="1.5" />
-      <line x1="24" y1="4" x2="14" y2="14" className="brand-line" strokeWidth="1.5" />
-      <line x1="14" y1="14" x2="14" y2="24" className="brand-line" strokeWidth="1.5" />
-      <line x1="4" y1="4" x2="24" y2="4" className="brand-line" strokeWidth="1.5" />
-      <circle cx="4" cy="4" r="3" className="brand-node" />
-      <circle cx="24" cy="4" r="3" className="brand-node" />
-      <circle cx="14" cy="14" r="3.5" className="brand-node" />
-      <circle cx="14" cy="24" r="2.5" className="brand-node" />
-    </svg>
-  );
-}
 
 const LINKS = {
   Product: ["Features", "How It Works", "Time Travel", "Pricing"],
@@ -54,18 +41,8 @@ export default function LandingFooter() {
         >
           {/* Brand */}
           <div style={{ maxWidth: 260 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <BrandMark size={26} />
-              <span
-                style={{
-                  fontSize: 17,
-                  fontWeight: 700,
-                  letterSpacing: "-0.025em",
-                  color: "var(--foreground)",
-                }}
-              >
-                Scrybe
-              </span>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
+              <BrandLockup size="md" />
             </div>
             <p style={{ fontSize: 13, color: "var(--foreground-muted)", lineHeight: 1.65, margin: 0 }}>
               The infinite canvas where your team's best ideas become shipped features — automatically.

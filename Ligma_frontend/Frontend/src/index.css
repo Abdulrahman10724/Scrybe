@@ -502,6 +502,17 @@ body {
 .drawer-slide-in {
   animation: drawer-slide-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+@keyframes brand-mark-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.brand-mark-spin {
+  transform-origin: 50% 50%;
+  animation: brand-mark-rotate 6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark-spin { animation: none; }
+}
 
 /* ─────────────────────────────────────────────────────────────────────────────
    REPLAY CANVAS
