@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 
 // ── Scrybe brand mark ────────────────────────────────────────────────
-// Concept: two canvas "nodes" (ideas) joined by a single pen stroke that
-// traces the shape of an S — the stroke draws itself in once on mount,
-// and one node pulses gently like a live collaborator's cursor.
-// Colors: teal (#0D9488) -> indigo (#4F46E5), matching the app's
-// existing accent gradient (see email templates / --primary).
-
 const SIZES = {
   sm: { icon: 26, gap: 8, font: 17 },
   md: { icon: 34, gap: 10, font: 21 },
@@ -41,7 +35,6 @@ function BrandMark({ size = "md", animated = true, className = "" }) {
         </linearGradient>
       </defs>
 
-      {/* pen-stroke connector tracing an S between two idea nodes */}
       <path
         d="M72,30 C58,30 58,50 50,50 C42,50 42,70 28,70"
         stroke="url(#scrybe-grad)"
@@ -57,10 +50,8 @@ function BrandMark({ size = "md", animated = true, className = "" }) {
         }}
       />
 
-      {/* node: collaborator / cursor */}
       <circle cx="72" cy="30" r="9" fill="#0D9488" />
 
-      {/* node: origin idea — with a soft live-presence pulse */}
       <circle cx="28" cy="70" r="9" fill="#4F46E5" />
       {animated && (
         <circle cx="28" cy="70" r="9" fill="#4F46E5" opacity="0.45">
@@ -96,20 +87,4 @@ function BrandLockup({ size = "md", animated = true, className = "" }) {
 }
 
 export { BrandMark, BrandLockup };
-export default function BrandMark({ size = "md", className = "" }) {
-  const dim = size === "sm" ? 20 : size === "lg" ? 40 : 28;
-
-  return (
-    <svg
-      width={dim}
-      height={dim}
-      viewBox="0 0 28 28"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`brand-mark-spin shrink-0 ${className}`}
-      aria-hidden="true"
-    >
-      {/* ...same lines/circles as before... */}
-    </svg>
-  );
-}
+export default BrandMark;
