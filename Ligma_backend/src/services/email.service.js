@@ -5,11 +5,20 @@ import logger from "../utils/logger.util.js";
 
 const transporter = config.GMAIL_USER && config.GMAIL_APP_PASSWORD
   ? nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: config.GMAIL_USER,
         pass: config.GMAIL_APP_PASSWORD,
       },
+      // Render's network doesn't route IPv6 outbound properly, so Node
+      // resolves Gmail's AAAA (IPv6) record first and gets ENETUNREACH.
+      // Forcing family: 4 makes it connect over IPv4 only.
+      family: 4,
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
     })
   : null;
 

@@ -25,6 +25,7 @@ import zoneRoutes from "./src/routes/zone.routes.js";
 import chatRoutes from "./src/routes/chat.routes.js";
 
 const app = express();
+app.set("trust proxy", 1);
 const server = http.createServer(app);
 let isShuttingDown = false;
 
