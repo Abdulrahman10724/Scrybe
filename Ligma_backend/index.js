@@ -24,6 +24,9 @@ import taskRoutes from "./src/routes/task.routes.js";
 import zoneRoutes from "./src/routes/zone.routes.js";
 import chatRoutes from "./src/routes/chat.routes.js";
 
+
+import dns from "node:dns";
+dns.setDefaultResultOrder("ipv4first");
 const app = express();
 app.set("trust proxy", 1);
 const server = http.createServer(app);
