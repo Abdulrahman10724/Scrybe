@@ -1,36 +1,21 @@
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
 import config from "../config/env.config.js";
 import logger from "../utils/logger.util.js";
 
-// Render blocks outbound SMTP ports (465/587) — connecting to smtp.gmail.com
-// directly fails with ENETUNREACH / connection timeout no matter what.
-// Gmail's OAuth2 API instead talks over HTTPS (port 443), which Render
-// never blocks, while still sending from the same Gmail account.
-const canUseOAuth2 =
-  config.GMAIL_USER &&
-  config.GMAIL_CLIENT_ID &&
-  config.GMAIL_CLIENT_SECRET &&
-  config.GMAIL_REFRESH_TOKEN;
+// Brevo REST API — HTTPS (port 443), no SMTP, no Render port-block issue.
+const client = SibApiV3Sdk.ApiClient.instance;
+client.authentications["api-key"].apiKey = config.BREVO_API_KEY;
 
-let transporter = null;
+const canUseBrevo = Boolean(config.BREVO_API_KEY && config.GMAIL_USER);
 
-const getTransporter = () => {
-  if (!canUseOAuth2) return null;
-  if (transporter) return transporter;
-
-  transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      type: "OAuth2",
-      user: config.GMAIL_USER,
-      clientId: config.GMAIL_CLIENT_ID,
-      clientSecret: config.GMAIL_CLIENT_SECRET,
-      refreshToken: config.GMAIL_REFRESH_TOKEN,
-    },
-  });
-
-  return transporter;
+let apiInstance = null;
+const getApiInstance = () => {
+  if (!canUseBrevo) return null;
+  if (!apiInstance) {
+    apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+  }
+  return apiInstance;
 };
 
 const buildVerificationUrl = (token) => {
@@ -39,9 +24,9 @@ const buildVerificationUrl = (token) => {
 };
 
 const sendVerificationEmail = async ({ to, name, token }) => {
-  const mailer = getTransporter();
-  if (!mailer) {
-    logger.warn("Gmail OAuth2 is not configured; skipping verification email delivery.");
+  const api = getApiInstance();
+  if (!api) {
+    logger.warn("Brevo is not configured; skipping verification email delivery.");
     return { success: false, skipped: true };
   }
 
@@ -69,20 +54,19 @@ const sendVerificationEmail = async ({ to, name, token }) => {
       </div>
     </div>
   `;
-
   const text = `Hi ${name || "there"},\n\nWelcome to Scrybe. Please verify your email address to get started.\n\n${verificationUrl}\n\nThis verification link expires in 24 hours.`;
 
   try {
-    const info = await mailer.sendMail({
-      from: `"Scrybe" <${config.GMAIL_USER}>`,
-      to,
+    const result = await api.sendTransacEmail({
+      sender: { email: config.GMAIL_USER, name: "Scrybe" },
+      to: [{ email: to, name: name || undefined }],
       subject: "Verify your Scrybe email",
-      html,
-      text,
+      htmlContent: html,
+      textContent: text,
     });
 
-    logger.info("Verification email sent", { id: info?.messageId, to });
-    return { success: true, id: info?.messageId };
+    logger.info("Verification email sent via Brevo", { id: result?.messageId, to });
+    return { success: true, id: result?.messageId };
   } catch (error) {
     logger.error("Failed to send verification email", { message: error?.message, to });
     throw new Error("We couldn't send the verification email right now.");
@@ -117,9 +101,9 @@ const buildInvitationHtml = ({ inviterName, workspaceTitle, role, inviteLink }) 
 `;
 
 const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, inviteLink }) => {
-  const mailer = getTransporter();
-  if (!mailer) {
-    logger.warn("Gmail OAuth2 is not configured; skipping invitation email delivery.");
+  const api = getApiInstance();
+  if (!api) {
+    logger.warn("Brevo is not configured; skipping invitation email delivery.");
     return { success: false, skipped: true };
   }
 
@@ -127,15 +111,15 @@ const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, invi
   const text = `${inviterName || "Someone"} invited you to join "${workspaceTitle}" as a ${role} on Scrybe.\n\nAccept the invitation: ${inviteLink}`;
 
   try {
-    const info = await mailer.sendMail({
-      from: `"Scrybe" <${config.GMAIL_USER}>`,
-      to,
+    const result = await api.sendTransacEmail({
+      sender: { email: config.GMAIL_USER, name: "Scrybe" },
+      to: [{ email: to }],
       subject: `${inviterName || "Someone"} invited you to join "${workspaceTitle}" on Scrybe`,
-      html,
-      text,
+      htmlContent: html,
+      textContent: text,
     });
-    logger.info("Invitation email sent", { id: info?.messageId, to });
-    return { success: true, id: info?.messageId };
+    logger.info("Invitation email sent via Brevo", { id: result?.messageId, to });
+    return { success: true, id: result?.messageId };
   } catch (error) {
     logger.error("Failed to send invitation email", { message: error?.message, to });
     throw new Error("We couldn't send the invitation email right now.");

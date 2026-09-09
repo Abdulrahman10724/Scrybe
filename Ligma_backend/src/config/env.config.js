@@ -29,6 +29,7 @@ AUTH_RATE_LIMIT_MAX: z.string().transform((v) => parseInt(v, 10)).default("20"),
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
   EMAIL_FROM: z.string().email().default("onboarding@resend.dev"),
   RESEND_API_KEY: z.string().optional().default(""),
+  BREVO_API_KEY: z.string().optional().default(""),
   // Email delivery — Nodemailer + Gmail SMTP (App Password). This is the
   // only email transport this project uses; Resend is not integrated.
   GMAIL_USER: z.string().optional().default(""),
