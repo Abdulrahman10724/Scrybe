@@ -32,7 +32,10 @@ AUTH_RATE_LIMIT_MAX: z.string().transform((v) => parseInt(v, 10)).default("20"),
   // Email delivery — Nodemailer + Gmail SMTP (App Password). This is the
   // only email transport this project uses; Resend is not integrated.
   GMAIL_USER: z.string().optional().default(""),
-  GMAIL_APP_PASSWORD: z.string().optional().default(""),
+  GMAIL_CLIENT_ID: z.string().optional().default(""),
+  GMAIL_CLIENT_SECRET: z.string().optional().default(""),
+  GMAIL_REFRESH_TOKEN: z.string().optional().default(""),
+  // GMAIL_APP_PASSWORD: z.string().optional().default(""),
   // Redis — connection only; no feature usage yet (see src/config/redis.config.js).
   // Defaults to the Docker Compose service name "redis"; falls back to localhost
   // for running the backend outside of Docker.

@@ -3,24 +3,35 @@ import nodemailer from "nodemailer";
 import config from "../config/env.config.js";
 import logger from "../utils/logger.util.js";
 
-const transporter = config.GMAIL_USER && config.GMAIL_APP_PASSWORD
-  ? nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: config.GMAIL_USER,
-        pass: config.GMAIL_APP_PASSWORD,
-      },
-      // Render's network doesn't route IPv6 outbound properly, so Node
-      // resolves Gmail's AAAA (IPv6) record first and gets ENETUNREACH.
-      // Forcing family: 4 makes it connect over IPv4 only.
-      family: 4,
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 15000,
-    })
-  : null;
+// Render blocks outbound SMTP ports (465/587) — connecting to smtp.gmail.com
+// directly fails with ENETUNREACH / connection timeout no matter what.
+// Gmail's OAuth2 API instead talks over HTTPS (port 443), which Render
+// never blocks, while still sending from the same Gmail account.
+const canUseOAuth2 =
+  config.GMAIL_USER &&
+  config.GMAIL_CLIENT_ID &&
+  config.GMAIL_CLIENT_SECRET &&
+  config.GMAIL_REFRESH_TOKEN;
+
+let transporter = null;
+
+const getTransporter = () => {
+  if (!canUseOAuth2) return null;
+  if (transporter) return transporter;
+
+  transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      type: "OAuth2",
+      user: config.GMAIL_USER,
+      clientId: config.GMAIL_CLIENT_ID,
+      clientSecret: config.GMAIL_CLIENT_SECRET,
+      refreshToken: config.GMAIL_REFRESH_TOKEN,
+    },
+  });
+
+  return transporter;
+};
 
 const buildVerificationUrl = (token) => {
   const baseUrl = config.CLIENT_URL.replace(/\/$/, "");
@@ -28,8 +39,9 @@ const buildVerificationUrl = (token) => {
 };
 
 const sendVerificationEmail = async ({ to, name, token }) => {
-  if (!transporter) {
-    logger.warn("Gmail transporter is not configured; skipping verification email delivery.");
+  const mailer = getTransporter();
+  if (!mailer) {
+    logger.warn("Gmail OAuth2 is not configured; skipping verification email delivery.");
     return { success: false, skipped: true };
   }
 
@@ -50,7 +62,6 @@ const sendVerificationEmail = async ({ to, name, token }) => {
           <p style="margin:0 0 20px;">
             <a href="${verificationUrl}" style="display:inline-block; padding:12px 18px; border-radius:999px; background:#4f46e5; color:#ffffff; text-decoration:none; font-weight:700;">Verify email address</a>
           </p>
-      
           <p style="margin:16px 0 0; font-size:12px; color:#9ca3af; line-height:1.6;">
             This verification link expires in 24 hours. If you did not create an account with Scrybe, you can safely ignore this message.
           </p>
@@ -62,7 +73,7 @@ const sendVerificationEmail = async ({ to, name, token }) => {
   const text = `Hi ${name || "there"},\n\nWelcome to Scrybe. Please verify your email address to get started.\n\n${verificationUrl}\n\nThis verification link expires in 24 hours.`;
 
   try {
-    const info = await transporter.sendMail({
+    const info = await mailer.sendMail({
       from: `"Scrybe" <${config.GMAIL_USER}>`,
       to,
       subject: "Verify your Scrybe email",
@@ -106,8 +117,9 @@ const buildInvitationHtml = ({ inviterName, workspaceTitle, role, inviteLink }) 
 `;
 
 const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, inviteLink }) => {
-  if (!transporter) {
-    logger.warn("Gmail transporter is not configured; skipping invitation email delivery.");
+  const mailer = getTransporter();
+  if (!mailer) {
+    logger.warn("Gmail OAuth2 is not configured; skipping invitation email delivery.");
     return { success: false, skipped: true };
   }
 
@@ -115,7 +127,7 @@ const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, invi
   const text = `${inviterName || "Someone"} invited you to join "${workspaceTitle}" as a ${role} on Scrybe.\n\nAccept the invitation: ${inviteLink}`;
 
   try {
-    const info = await transporter.sendMail({
+    const info = await mailer.sendMail({
       from: `"Scrybe" <${config.GMAIL_USER}>`,
       to,
       subject: `${inviterName || "Someone"} invited you to join "${workspaceTitle}" on Scrybe`,
