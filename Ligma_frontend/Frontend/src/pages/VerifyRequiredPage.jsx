@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
-import { Mail, RefreshCw, Check, ArrowLeft, ShieldCheck } from "lucide-react";
-
+import { Mail, RefreshCw, Check, ArrowLeft, ShieldCheck, Inbox } from "lucide-react";
 import { BrandLockup } from "../components/ui/BrandMark";
 import { resendVerificationEmail, clearAuthState, bootstrapAuth } from "../redux/authSlice";
 
@@ -176,6 +175,19 @@ export default function VerifyRequiredPage() {
               <ShieldCheck className="h-4 w-4 shrink-0 text-[color:var(--primary)]" />
               <span className="truncate text-sm font-medium">{email}</span>
             </div>
+                        <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mx-auto mt-4 flex max-w-sm items-start gap-3 rounded-2xl border border-[color:var(--highlight)]/30 bg-[color:var(--highlight-soft)] px-4 py-3 text-left"
+            >
+              <Inbox className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--highlight)]" />
+              <p className="text-xs leading-5 text-[color:var(--foreground-secondary)]">
+                <span className="font-semibold text-[color:var(--foreground)]">Check your email.</span>{" "}
+                If you can't find it in your inbox, look in your{" "}
+                <span className="font-semibold">Spam / </span> folder
+              </p>
+            </motion.div>
           </div>
 
           {/* steps */}
