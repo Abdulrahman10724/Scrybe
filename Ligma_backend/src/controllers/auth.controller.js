@@ -1,6 +1,6 @@
 import { register, login, verifyEmail, resendVerificationEmail } from "../services/auth.service.js";
 import { sendSuccess } from "../utils/api-response.util.js";
-
+import { verifyAccessToken } from "../utils/jwt.util.js";
 const registerUser = async (req, res, next) => {
   try {
     const result = await register(req.body);
@@ -32,7 +32,21 @@ const verifyEmailUser = async (req, res, next) => {
 
 const resendVerificationEmailUser = async (req, res, next) => {
   try {
-    const result = await resendVerificationEmail({ email: req.body?.email });
+    let email = req.body?.email;
+
+    // Fallback: body me email na ho to valid token se le lo
+    if (!email) {
+      const header = req.headers.authorization;
+      if (header?.startsWith("Bearer ")) {
+        try {
+          email = verifyAccessToken(header.split(" ")[1])?.email;
+        } catch {
+          /* invalid token: neeche "Email is required" aayega */
+        }
+      }
+    }
+
+    const result = await resendVerificationEmail({ email });
     return sendSuccess(res, 200, "If the account exists, a verification email has been sent", result);
   } catch (error) {
     return next(error);
