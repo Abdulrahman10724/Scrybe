@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect,useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -23,17 +23,19 @@ export default function VerifyEmailPage() {
   const { user, verificationLoading, verificationState, verificationMessage } =
     useSelector((state) => state.auth);
 
+  const verifiedTokenRef = useRef(null);
+
   useEffect(() => {
-    if (!token) {
+    if (!token || verifiedTokenRef.current === token) {
       return;
     }
 
+    verifiedTokenRef.current = token;
     dispatch(verifyEmailUser(token));
   }, [dispatch, token]);
 
   const handleResend = async () => {
-    const result = await dispatch(resendVerificationEmail());
-    if (resendVerificationEmail.fulfilled.match(result)) {
+    const result = await dispatch(resendVerificationEmail(user?.email));    if (resendVerificationEmail.fulfilled.match(result)) {
       navigate("/verify-required", {
         replace: true,
         state: { email: user?.email },

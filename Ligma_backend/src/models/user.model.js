@@ -25,9 +25,11 @@ const sanitizeUser = (user) => {
   };
 };
 
-const findUserByEmail = async (email) => getUsersCollection().findOne({ email: email.trim().toLowerCase() });
+const findUserByEmail = async (email) =>
+  getUsersCollection().findOne({ email: email.trim().toLowerCase() });
 
-const findUserById = async (id) => getUsersCollection().findOne({ _id: new ObjectId(id) });
+const findUserById = async (id) =>
+  getUsersCollection().findOne({ _id: new ObjectId(id) });
 
 const createUser = async ({ name, email, password }) => {
   const now = new Date();
@@ -50,7 +52,8 @@ const createUser = async ({ name, email, password }) => {
   };
 };
 
-const hashVerificationToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+const hashVerificationToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
 
 const setEmailVerificationToken = async (userId, token) => {
   const tokenHash = hashVerificationToken(token);
@@ -64,7 +67,7 @@ const setEmailVerificationToken = async (userId, token) => {
         emailVerificationExpiresAt: expiresAt,
         updatedAt: new Date(),
       },
-    }
+    },
   );
 
   return { tokenHash, expiresAt };
@@ -79,7 +82,7 @@ const clearEmailVerificationToken = async (userId) => {
         emailVerificationExpiresAt: null,
         updatedAt: new Date(),
       },
-    }
+    },
   );
 };
 
@@ -96,11 +99,9 @@ const markEmailVerified = async (userId) => {
     {
       $set: {
         emailVerified: true,
-        emailVerificationTokenHash: null,
-        emailVerificationExpiresAt: null,
         updatedAt: new Date(),
       },
-    }
+    },
   );
 };
 
