@@ -108,13 +108,7 @@ const sendVerificationEmail = async ({ to, name, token }) => {
             </td>
           </tr>
 
-          <!-- Fallback link -->
-          <tr>
-            <td style="padding:20px 36px 8px;">
-              <p style="margin:0 0 6px;font-size:12px;color:#64748B;">If the button doesn't work, copy and paste this link into your browser:</p>
-              <p style="margin:0;font-size:12px;word-break:break-all;"><a href="${verificationUrl}" style="color:#4F46E5;">${verificationUrl}</a></p>
-            </td>
-          </tr>
+          
 
           <!-- Footer -->
           <tr>

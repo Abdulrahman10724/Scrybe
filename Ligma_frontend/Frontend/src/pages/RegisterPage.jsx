@@ -94,7 +94,6 @@ const from = location.state?.from
         <div className="w-full max-w-sm">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-[color:var(--foreground)]">Create your account</h1>
-            <p className="mt-1 text-sm text-[color:var(--foreground-muted)]">Free to start. No credit card required.</p>
           </div>
 
           {error && (
@@ -108,7 +107,7 @@ const from = location.state?.from
               <label className="block text-xs font-semibold text-[color:var(--foreground-secondary)] mb-1.5">Full name</label>
               <input
                 type="text"
-                placeholder="Alex Kim"
+                placeholder="Abdul Rahman"
                 autoComplete="name"
                 className="w-full h-10 px-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--foreground-muted)] outline-none focus:border-[color:var(--primary)] focus:ring-2 focus:ring-[color:var(--focus-ring)] transition-all disabled:opacity-50"
                 disabled={loading}
