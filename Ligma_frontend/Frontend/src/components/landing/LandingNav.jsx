@@ -8,7 +8,6 @@ const NAV_LINKS = [
   { label: "Features", href: "#features" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Time Travel", href: "#time-travel" },
-  { label: "Pricing", href: "#pricing" },
 ];
 
 export default function LandingNav() {

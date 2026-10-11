@@ -9,7 +9,7 @@ import RBACSection from "../components/landing/RBACSection";
 import StatsSection from "../components/landing/StatsSection";
 import FinalCTASection from "../components/landing/FinalCTASection";
 import LandingFooter from "../components/landing/LandingFooter";
-
+import ScrollTrail from "../components/landing/ScrollTrail";
 export default function LandingPage() {
   // Set page title & meta
   useEffect(() => {
@@ -35,6 +35,7 @@ export default function LandingPage() {
         overflowX: "hidden",
       }}
     >
+       <ScrollTrail />
       <LandingNav />
       <main>
         <HeroSection />

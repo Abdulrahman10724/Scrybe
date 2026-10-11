@@ -454,29 +454,7 @@ export default function HeroSection() {
       {/* ── Content ── */}
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 800, width: "100%" }}>
 
-        {/* Badge */}
-        <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            background: "var(--primary-soft)",
-            border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-            borderRadius: 99,
-            padding: "5px 14px",
-            marginBottom: 28,
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--primary)",
-            letterSpacing: "0.01em",
-          }}
-        >
-          <Zap size={11} style={{ flexShrink: 0 }} />
-          AI-powered infinite canvas • Now in early access
-        </motion.div>
+
 
         {/* Headline */}
         <h1
