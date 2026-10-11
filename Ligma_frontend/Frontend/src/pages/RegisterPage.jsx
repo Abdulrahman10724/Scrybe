@@ -1,5 +1,7 @@
-import React, { useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";import { useDispatch, useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +17,8 @@ const schema = z.object({
 export default function RegisterPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
+    const location = useLocation();
+  const [showPassword, setShowPassword] = useState(false);
 const from = location.state?.from
   ? `${location.state.from.pathname}${location.state.from.search || ""}`
   : null;
@@ -129,14 +132,25 @@ const from = location.state?.from
 
             <div>
               <label className="block text-xs font-semibold text-[color:var(--foreground-secondary)] mb-1.5">Password</label>
-              <input
-                type="password"
-                placeholder="At least 8 characters"
-                autoComplete="new-password"
-                className="w-full h-10 px-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--foreground-muted)] outline-none focus:border-[color:var(--primary)] focus:ring-2 focus:ring-[color:var(--focus-ring)] transition-all disabled:opacity-50"
-                disabled={loading}
-                {...register("password")}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="At least 8 characters"
+                  autoComplete="new-password"
+                  className="w-full h-10 px-3 pr-10 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface)] text-sm text-[color:var(--foreground)] placeholder:text-[color:var(--foreground-muted)] outline-none focus:border-[color:var(--primary)] focus:ring-2 focus:ring-[color:var(--focus-ring)] transition-all disabled:opacity-50"
+                  disabled={loading}
+                  {...register("password")}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--foreground-muted)] hover:text-[color:var(--foreground)] transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               {errors.password && <p className="mt-1.5 text-xs text-[color:var(--danger)]">{errors.password.message}</p>}
             </div>
 

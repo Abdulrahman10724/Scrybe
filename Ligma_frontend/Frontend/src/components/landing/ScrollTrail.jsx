@@ -12,9 +12,7 @@ function Tick({ at, progress }) {
   const fill = useTransform(progress, [Math.max(at - 0.02, 0), at], [0, 1]);
   const scale = useTransform(progress, [Math.max(at - 0.02, 0), at], [0.6, 1]);
   return (
-    <div
-      style={{ position: "absolute", top: `${at * 100}%`, left: "50%" }}
-    >
+    <div style={{ position: "absolute", top: `${at * 100}%`, left: "50%" }}>
       <div
         style={{
           width: 10,
@@ -52,6 +50,8 @@ export default function ScrollTrail() {
     mass: 0.4,
   });
   const headTop = useTransform(progress, [0, 1], ["0%", "100%"]);
+  // tail pehle 4% scroll me dheere dheere "grow" hoti hai
+  const tailScale = useTransform(progress, [0, 0.04], [0, 1]);
 
   if (reduce) return null;
 
@@ -79,14 +79,17 @@ export default function ScrollTrail() {
         }}
       />
 
-      {/* line left behind */}
+      {/* line left behind (shimmering) */}
       <motion.div
         style={{
           position: "absolute",
           inset: 0,
           transformOrigin: "top",
           scaleY: progress,
-          background: "linear-gradient(to bottom, #0D9488, #4F46E5)",
+          backgroundImage:
+            "linear-gradient(to bottom, #0D9488, #4F46E5, #0D9488, #4F46E5)",
+          backgroundSize: "100% 200%",
+          animation: "trail-flow 2.4s linear infinite",
           borderRadius: 2,
           boxShadow: "0 0 8px rgba(13,148,136,0.5)",
         }}
@@ -97,10 +100,27 @@ export default function ScrollTrail() {
         <Tick key={t} at={t} progress={progress} />
       ))}
 
-      {/* moving head node */}
+      {/* comet tail — head ke peeche glowing line */}
       <motion.div
-        style={{ position: "absolute", left: "50%", top: headTop }}
-      >
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: headTop,
+          width: 5,
+          height: 90,
+          marginLeft: -2.5,
+          y: "-100%",
+          scaleY: tailScale,
+          transformOrigin: "bottom",
+          background:
+            "linear-gradient(to top, rgba(79,70,229,0.9), rgba(13,148,136,0.45), transparent)",
+          filter: "blur(1.5px)",
+          borderRadius: 4,
+        }}
+      />
+
+      {/* moving head node */}
+      <motion.div style={{ position: "absolute", left: "50%", top: headTop }}>
         <span
           style={{
             position: "absolute",
@@ -132,6 +152,10 @@ export default function ScrollTrail() {
         @keyframes trail-ping {
           0%   { transform: scale(0.6); opacity: 0.9; }
           100% { transform: scale(2);   opacity: 0; }
+        }
+        @keyframes trail-flow {
+          from { background-position: 0 0; }
+          to   { background-position: 0 200%; }
         }
       `}</style>
     </div>

@@ -34,6 +34,16 @@ export default function WorkspacePage() {
     }
   }, [dispatch, id]);
 
+  // Browser tab title: "<Workspace name> · Scrybe"
+  useEffect(() => {
+    document.title = activeWorkspace?.title
+      ? `${activeWorkspace.title} · Scrybe`
+      : "Scrybe";
+    return () => {
+      document.title = "Scrybe";
+    };
+  }, [activeWorkspace?.title]);
+
   useEffect(() => {
     const handlePresence = (payload) => {
       if (payload?.workspaceId !== id) return;

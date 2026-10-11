@@ -13,9 +13,9 @@ const TOOLS = [
   { id: "line",      label: "Line",      icon: Minus },
 ];
 
-const COLORS = [
-  "#FDE68A", "#BFDBFE", "#FDBA74", "#BBF7D0", "#F9A8D4", "#D8B4FE",
-];
+// const COLORS = [
+//   "#FDE68A", "#BFDBFE", "#FDBA74", "#BBF7D0", "#F9A8D4", "#D8B4FE",
+// ];
 
  function CanvasToolbar({
   activeTool,
@@ -57,7 +57,7 @@ const COLORS = [
         })}
       </div>
 
-      {/* Color swatches */}
+      {/* Color swatches
       {canEdit && (
         <div className="flex items-center gap-1 border-l border-[color:var(--border)] pl-2">
           {COLORS.map((color) => {
@@ -79,7 +79,7 @@ const COLORS = [
             );
           })}
         </div>
-      )}
+      )} */}
 
       {/* Lock + Permissions (Lead + selected node) */}
       {selectedNode && isLead && (

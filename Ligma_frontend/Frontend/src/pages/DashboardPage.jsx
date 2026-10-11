@@ -14,7 +14,7 @@ import AccountMenu from "../components/layout/AccountMenu";
 import InvitationInboxMenu from "../components/layout/InvitationInboxMenu";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import { BrandLockup } from "../components/ui/BrandMark";
-
+import ScrollTrail from "../components/landing/ScrollTrail";
 export default function DashboardPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -55,6 +55,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[color:var(--background)] text-[color:var(--foreground)]">
+      <ScrollTrail />
       <header className="sticky top-0 z-20 h-14 bg-[color:var(--surface)] border-b border-[color:var(--border)] flex items-center justify-between px-6 lg:px-8">
         <BrandLockup size="md" />
         <div className="flex items-center gap-2">

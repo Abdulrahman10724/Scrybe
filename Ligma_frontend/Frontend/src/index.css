@@ -738,3 +738,31 @@ body {
   .hero-blob-2,
   .hero-blob-3 { opacity: 0.25; }
 }
+/* ── Scrybe BrandMark animations ── */
+.sbm-pp { transform-box: fill-box; transform-origin: center; }
+.sbm-rip { opacity: 0; }
+
+.sbm-play .sbm-ink { stroke-dasharray: 1; stroke-dashoffset: 1; animation: sbm-draw 1s .3s ease forwards; }
+.sbm-play .sbm-ink2 { animation: sbm-draw .5s .9s ease forwards; }
+.sbm-play .sbm-ink3 { animation: sbm-draw .5s 1.2s ease forwards; }
+.sbm-play .sbm-drop { animation: sbm-drop .6s ease both; }
+.sbm-play .sbm-cur { animation: sbm-cur .7s .9s cubic-bezier(.3,1.3,.5,1) both; }
+.sbm-play .sbm-pop { animation: sbm-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
+.sbm-play .sbm-p1 { animation-delay: .2s; }
+.sbm-play .sbm-p2 { animation-delay: .5s; }
+.sbm-play .sbm-p3 { animation-delay: .8s; }
+.sbm-play .sbm-p4 { animation-delay: 1.1s; }
+.sbm-play .sbm-p5 { animation-delay: 1.4s; }
+.sbm-play .sbm-beat { animation: sbm-pop .4s 1.1s both, sbm-pulse 2s 1.8s ease-in-out infinite; }
+.sbm-play .sbm-spin { transform-box: view-box; transform-origin: 50px 50px; animation: sbm-spin 7s linear 1.4s infinite; }
+.sbm-play .sbm-spin-slow { transform-box: view-box; transform-origin: 50px 50px; animation: sbm-spin 14s linear 1.6s infinite; }
+.sbm-play .sbm-rip { animation: sbm-ripple 2s 1s ease-out infinite; }
+.sbm-play .sbm-rip2 { animation-delay: 1.7s; }
+
+@keyframes sbm-draw { to { stroke-dashoffset: 0; } }
+@keyframes sbm-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes sbm-drop { from { transform: translate(0,-26px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sbm-cur { from { transform: translate(-14px,22px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sbm-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+@keyframes sbm-spin { to { transform: rotate(360deg); } }
+@keyframes sbm-ripple { from { transform: scale(.4); opacity: .8; } to { transform: scale(1.9); opacity: 0; } }
