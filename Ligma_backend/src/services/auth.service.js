@@ -122,19 +122,17 @@ const verifyEmail = async ({ token }) => {
   return { alreadyVerified: false, user: sanitizeUser({ ...user, emailVerified: true }) };
 };
 
-const resendVerificationEmail = async ({ userId }) => {
-  const user = await findUserById(userId);
-
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
+const resendVerificationEmail = async ({ email }) => {
+  if (!email || typeof email !== "string") {
+    const error = new Error("Email is required");
+    error.statusCode = 400;
     throw error;
   }
 
-  if (user.emailVerified) {
-    const error = new Error("This account is already verified");
-    error.statusCode = 409;
-    throw error;
+  const user = await findUserByEmail(email);
+
+  if (!user || user.emailVerified) {
+    return { success: true };
   }
 
   const verificationToken = crypto.randomBytes(32).toString("hex");

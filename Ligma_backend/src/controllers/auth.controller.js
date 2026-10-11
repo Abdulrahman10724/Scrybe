@@ -32,8 +32,8 @@ const verifyEmailUser = async (req, res, next) => {
 
 const resendVerificationEmailUser = async (req, res, next) => {
   try {
-    const result = await resendVerificationEmail({ userId: req.user.id });
-    return sendSuccess(res, 200, "Verification email sent", result);
+    const result = await resendVerificationEmail({ email: req.body?.email });
+    return sendSuccess(res, 200, "If the account exists, a verification email has been sent", result);
   } catch (error) {
     return next(error);
   }

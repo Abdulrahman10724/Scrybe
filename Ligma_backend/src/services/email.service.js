@@ -9,6 +9,11 @@ client.authentications["api-key"].apiKey = config.BREVO_API_KEY;
 
 const canUseBrevo = Boolean(config.BREVO_API_KEY && config.GMAIL_USER);
 
+if (!canUseBrevo) {
+  logger.error(
+    `Brevo NOT configured. BREVO_API_KEY set: ${Boolean(config.BREVO_API_KEY)}, GMAIL_USER set: ${Boolean(config.GMAIL_USER)}`
+  );
+}
 let apiInstance = null;
 const getApiInstance = () => {
   if (!canUseBrevo) return null;
@@ -26,8 +31,7 @@ const buildVerificationUrl = (token) => {
 const sendVerificationEmail = async ({ to, name, token }) => {
   const api = getApiInstance();
   if (!api) {
-    logger.warn("Brevo is not configured; skipping verification email delivery.");
-    return { success: false, skipped: true };
+    throw new Error("Brevo is not configured (BREVO_API_KEY / GMAIL_USER missing)");
   }
 
   const verificationUrl = buildVerificationUrl(token);
@@ -68,8 +72,13 @@ const sendVerificationEmail = async ({ to, name, token }) => {
     logger.info("Verification email sent via Brevo", { id: result?.messageId, to });
     return { success: true, id: result?.messageId };
   } catch (error) {
-    logger.error("Failed to send verification email", { message: error?.message, to });
-    throw new Error("We couldn't send the verification email right now.");
+    logger.error("Failed to send verification email", {
+      message: error?.message,
+      status: error?.status,
+      body: error?.response?.body || error?.response?.text,
+      to,
+    });
+        throw new Error("We couldn't send the verification email right now.");
   }
 };
 
@@ -103,8 +112,7 @@ const buildInvitationHtml = ({ inviterName, workspaceTitle, role, inviteLink }) 
 const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, inviteLink }) => {
   const api = getApiInstance();
   if (!api) {
-    logger.warn("Brevo is not configured; skipping invitation email delivery.");
-    return { success: false, skipped: true };
+    throw new Error("Brevo is not configured (BREVO_API_KEY / GMAIL_USER missing)");
   }
 
   const html = buildInvitationHtml({ inviterName, workspaceTitle, role, inviteLink });
@@ -121,8 +129,13 @@ const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, invi
     logger.info("Invitation email sent via Brevo", { id: result?.messageId, to });
     return { success: true, id: result?.messageId };
   } catch (error) {
-    logger.error("Failed to send invitation email", { message: error?.message, to });
-    throw new Error("We couldn't send the invitation email right now.");
+    logger.error("Failed to send invitation email", {
+      message: error?.message,
+      status: error?.status,
+      body: error?.response?.body || error?.response?.text,
+      to,
+    });
+        throw new Error("We couldn't send the invitation email right now.");
   }
 };
 

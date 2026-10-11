@@ -23,7 +23,7 @@ const verificationResendLimiter = rateLimit({
 router.post("/register", authLimiter, validate(registerSchema), registerUser);
 router.post("/login", authLimiter, validate(loginSchema), loginUser);
 router.post("/verify-email", verifyEmailUser);
-router.post("/resend-verification", authMiddleware, verificationResendLimiter, resendVerificationEmailUser);
+router.post("/resend-verification", verificationResendLimiter, resendVerificationEmailUser);
 router.get("/me", authMiddleware, getMe);
 router.post("/logout", logoutUser);
 
