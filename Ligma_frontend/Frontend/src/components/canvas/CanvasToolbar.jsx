@@ -26,10 +26,6 @@ const TOOLS = [
   { id: "line", label: "Line", icon: Minus },
 ];
 
-// const COLORS = [
-//   "#FDE68A", "#BFDBFE", "#FDBA74", "#BBF7D0", "#F9A8D4", "#D8B4FE",
-// ];
-
 function CanvasToolbar({
   activeTool,
   onToolChange,
@@ -44,20 +40,29 @@ function CanvasToolbar({
   const tools = canEdit ? TOOLS : TOOLS.filter((tool) => tool.id === "select");
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 top-2 md:top-4 z-20 flex items-center gap-1.5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-2 py-1.5 shadow-[var(--shadow-md)] backdrop-blur-sm max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar">
-      {/* Tool buttons */}
-      <div className="relative flex shrink-0 flex-row items-center gap-0.5">       
-         {tools.map(({ id, label, icon: Icon }) => {
+    <div
+      className="absolute left-1/2 -translate-x-1/2 top-2 md:top-4 z-20
+        flex flex-row items-center gap-1.5 flex-nowrap
+        rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)]
+        px-1.5 py-1 md:px-2 md:py-1.5 shadow-[var(--shadow-md)] backdrop-blur-sm
+        max-w-[calc(100vw-1rem)] overflow-x-auto overflow-y-hidden no-scrollbar"
+      style={{ touchAction: "pan-x" }}
+    >
+      {/* Tool buttons — hamesha horizontal row */}
+      <div className="flex flex-row flex-nowrap items-center gap-0.5 shrink-0">
+        {tools.map(({ id, label, icon: Icon }) => {
           const isActive = activeTool === id;
           return (
             <button
               key={id}
+              type="button"
               onClick={() => onToolChange(id)}
               title={label}
               aria-label={label}
               aria-pressed={isActive}
               className={[
-                "relative flex cursor-pointer flex-col items-center justify-center gap-0.5 w-11 h-11 rounded-lg text-[10px] font-medium transition-all duration-150",
+                "relative flex shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5",
+                "w-10 h-10 md:w-11 md:h-11 rounded-lg text-[10px] font-medium transition-all duration-150",
                 isActive
                   ? "bg-[color:var(--primary-soft)] text-[color:var(--primary)]"
                   : "text-[color:var(--foreground-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)]",
@@ -66,7 +71,7 @@ function CanvasToolbar({
               <Icon
                 className={`w-4 h-4 ${isActive ? "stroke-[2.2]" : "stroke-[1.8]"}`}
               />
-              <span className="text-[9px] leading-none opacity-80">
+              <span className="text-[8px] md:text-[9px] leading-none opacity-80">
                 {label}
               </span>
             </button>
@@ -74,36 +79,14 @@ function CanvasToolbar({
         })}
       </div>
 
-      {/* Color swatches
-      {canEdit && (
-        <div className="flex items-center gap-1 border-l border-[color:var(--border)] pl-2">
-          {COLORS.map((color) => {
-            const isActive = activeColor === color;
-            return (
-              <button
-                key={color}
-                onClick={() => onColorChange(color)}
-                title={color}
-                aria-label={`Color ${color}`}
-                className={[
-                  "h-6 w-6 cursor-pointer rounded-full transition-all duration-150",
-                  isActive
-                    ? "scale-125 ring-2 ring-[color:var(--foreground)] ring-offset-1 ring-offset-[color:var(--surface)]"
-                    : "hover:scale-110 ring-1 ring-[color:var(--border)]",
-                ].join(" ")}
-                style={{ backgroundColor: color }}
-              />
-            );
-          })}
-        </div>
-      )} */}
-
       {/* Lock + Permissions (Lead + selected node) */}
       {selectedNode && isLead && (
-        <div className="relative flex shrink-0 flex-row items-center gap-1 border-l border-[color:var(--border)] pl-2">          <button
+        <div className="flex flex-row flex-nowrap items-center gap-1 shrink-0 border-l border-[color:var(--border)] pl-2">
+          <button
+            type="button"
             onClick={onToggleLock}
             title={selectedNode.locked ? "Unlock node" : "Lock node"}
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-[color:var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--foreground-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)] transition-colors"
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-[color:var(--border)] px-2 py-1.5 text-[11px] font-medium whitespace-nowrap text-[color:var(--foreground-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)] transition-colors"
           >
             {selectedNode.locked ? (
               <Unlock className="h-3.5 w-3.5" />
@@ -113,9 +96,10 @@ function CanvasToolbar({
             {selectedNode.locked ? "Unlock" : "Lock"}
           </button>
           <button
+            type="button"
             onClick={onOpenPermissions}
             title="Edit permissions"
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-[color:var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--foreground-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)] transition-colors"
+            className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-[color:var(--border)] px-2 py-1.5 text-[11px] font-medium whitespace-nowrap text-[color:var(--foreground-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)] transition-colors"
           >
             <Settings2 className="h-3.5 w-3.5" />
             Perms

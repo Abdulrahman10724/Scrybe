@@ -412,14 +412,18 @@ function CanvasPresenceLayer({
         ))}
       </div>
 
-            <div className="pointer-events-none absolute left-2 top-[72px] md:left-4 md:top-4 z-30 flex flex-col gap-3">
+      <div className="pointer-events-none absolute left-2 top-[72px] md:left-4 md:top-4 z-30 flex flex-col gap-3">
         <div className="pointer-events-auto hidden md:flex items-center gap-2 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)]/92 px-4 py-3 shadow-xl backdrop-blur-xl">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[color:var(--accent)]/10 text-[color:var(--accent)]">
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-secondary)]">Presence zones</p>
-            <p className="text-sm font-semibold text-[color:var(--text-primary)]">{zoneList.length} active overlays</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-secondary)]">
+              Presence zones
+            </p>
+            <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+              {zoneList.length} active overlays
+            </p>
           </div>
         </div>
 

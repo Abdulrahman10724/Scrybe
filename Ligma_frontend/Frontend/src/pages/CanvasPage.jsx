@@ -2259,7 +2259,7 @@ const lastNodeClickRef = useRef({ id: null, t: 0 });
 
       {/* Cursor hint when tool is active */}
       {activeTool !== "select" && (
-        <div className="absolute top-[72px] md:top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <div className="absolute top-[64px] md:top-[84px] left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <span className="bg-[color:var(--accent)] text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-md">
             Drag to draw · tap to place {activeTool}
           </span>
