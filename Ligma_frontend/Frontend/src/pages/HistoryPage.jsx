@@ -121,7 +121,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <div className="w-full h-full p-8 bg-[color:var(--bg-primary)] overflow-y-auto custom-scrollbar">
+      <div className="w-full h-full p-4 md:p-8 bg-[color:var(--bg-primary)] overflow-y-auto custom-scrollbar">
         {/* Header */}
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[color:var(--border)] pb-6">
           <div>

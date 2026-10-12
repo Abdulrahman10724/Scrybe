@@ -766,3 +766,33 @@ body {
 @keyframes sbm-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
 @keyframes sbm-spin { to { transform: rotate(360deg); } }
 @keyframes sbm-ripple { from { transform: scale(.4); opacity: .8; } to { transform: scale(1.9); opacity: 0; } }
+
+/* ───────── MOBILE HELPERS ───────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* pull-to-refresh / bounce band */
+html, body, #root { overscroll-behavior: none; }
+
+/* chat drawer mobile par full width */
+@media (max-width: 640px) {
+  .canvas-chat-drawer { width: 100%; }
+}
+
+/* Landing "Time Travel" demo: mobile par chhota */
+@media (max-width: 640px) {
+  .tt-ticklabels { display: none !important; }
+}
+@media (max-width: 480px) {
+  .tt-canvas-inner {
+    transform: scale(0.8);
+    transform-origin: top left;
+    width: 125%;
+    height: 125%;
+  }
+}
+
+/* OPTIONAL: iOS input focus par zoom na kare (editing ke waqt text thoda bada dikhega) */
+@media (max-width: 640px) {
+  input, textarea, select { font-size: 16px !important; }
+}

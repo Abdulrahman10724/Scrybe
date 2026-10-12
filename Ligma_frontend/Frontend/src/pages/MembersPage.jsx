@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { Users, UserMinus, ChevronDown, MailOpen, Clock, Loader2 } from "lucide-react";
+import {
+  Users,
+  UserMinus,
+  ChevronDown,
+  MailOpen,
+  Clock,
+  Loader2,
+} from "lucide-react";
 
 import {
   fetchWorkspaceMembers,
@@ -10,16 +17,24 @@ import {
   removeMember,
   fetchPendingInvitations,
   setMemberRoleLocally,
-} from "../redux/memberSlice"; import { Button } from "../components/ui/button";
+} from "../redux/memberSlice";
+import { Button } from "../components/ui/button";
 import InviteMemberDialog from "../components/invitations/InviteMemberDialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 const ROLE_OPTIONS = ["Contributor", "Viewer"];
 
 const ROLE_STYLES = {
   Lead: "bg-[color:var(--primary-soft)] text-[color:var(--primary)] border-[color:var(--primary)]/20",
-  Contributor: "bg-[color:var(--highlight-soft)] text-[color:var(--warning)] border-[color:var(--highlight)]/20",
-  Viewer: "bg-[color:var(--surface-muted)] text-[color:var(--foreground-muted)] border-[color:var(--border)]",
+  Contributor:
+    "bg-[color:var(--highlight-soft)] text-[color:var(--warning)] border-[color:var(--highlight)]/20",
+  Viewer:
+    "bg-[color:var(--surface-muted)] text-[color:var(--foreground-muted)] border-[color:var(--border)]",
 };
 
 function getInitials(name = "") {
@@ -43,7 +58,9 @@ function AvatarFallback({ name }) {
 function RoleSelect({ currentRole, isOwner, saving, onChangeRole }) {
   if (isOwner) {
     return (
-      <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${ROLE_STYLES.Lead}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${ROLE_STYLES.Lead}`}
+      >
         Lead <span className="ml-1 opacity-60 text-[10px]">(owner)</span>
       </span>
     );
@@ -51,7 +68,9 @@ function RoleSelect({ currentRole, isOwner, saving, onChangeRole }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-opacity cursor-pointer ${ROLE_STYLES[currentRole] || ROLE_STYLES.Viewer} hover:opacity-80`}>
+      <DropdownMenuTrigger
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold transition-opacity cursor-pointer ${ROLE_STYLES[currentRole] || ROLE_STYLES.Viewer} hover:opacity-80`}
+      >
         {currentRole}
         <ChevronDown className="w-3 h-3 opacity-60" />
       </DropdownMenuTrigger>
@@ -64,7 +83,11 @@ function RoleSelect({ currentRole, isOwner, saving, onChangeRole }) {
               event.preventDefault();
               onChangeRole(role);
             }}
-            className={role === currentRole ? "font-semibold text-[color:var(--accent)]" : "text-[color:var(--text-primary)]"}
+            className={
+              role === currentRole
+                ? "font-semibold text-[color:var(--accent)]"
+                : "text-[color:var(--text-primary)]"
+            }
           >
             {role}
           </DropdownMenuItem>
@@ -77,7 +100,12 @@ function RoleSelect({ currentRole, isOwner, saving, onChangeRole }) {
 export default function MembersPage() {
   const { id: workspaceId } = useParams();
   const dispatch = useDispatch();
-  const { list: members, pendingInvitations, loading, saving } = useSelector((state) => state.members);
+  const {
+    list: members,
+    pendingInvitations,
+    loading,
+    saving,
+  } = useSelector((state) => state.members);
   const { user: currentUser } = useSelector((state) => state.auth);
   const { activeWorkspace } = useSelector((state) => state.workspace);
 
@@ -86,7 +114,8 @@ export default function MembersPage() {
 
   const isCurrentUserOwner = activeWorkspace?.ownerId === currentUser?.id;
   const currentMember = members.find((m) => m.userId === currentUser?.id);
-  const isCurrentUserLead = isCurrentUserOwner || currentMember?.role === "Lead";
+  const isCurrentUserLead =
+    isCurrentUserOwner || currentMember?.role === "Lead";
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -103,7 +132,9 @@ export default function MembersPage() {
     // Optimistic UI — reflect the change immediately.
     dispatch(setMemberRoleLocally({ userId, role }));
 
-    const result = await dispatch(changeMemberRole({ workspaceId, userId, role }));
+    const result = await dispatch(
+      changeMemberRole({ workspaceId, userId, role }),
+    );
 
     if (changeMemberRole.fulfilled.match(result)) {
       toast.success("Role updated");
@@ -114,11 +145,13 @@ export default function MembersPage() {
       }
       toast.error(result.payload || "Failed to update role");
     }
-  }; 
+  };
 
   const handleRemove = async () => {
     if (!confirmRemove) return;
-    const result = await dispatch(removeMember({ workspaceId, userId: confirmRemove.userId }));
+    const result = await dispatch(
+      removeMember({ workspaceId, userId: confirmRemove.userId }),
+    );
     setConfirmRemove(null);
     if (removeMember.fulfilled.match(result)) {
       toast.success("Member removed");
@@ -128,7 +161,7 @@ export default function MembersPage() {
   };
 
   return (
-    <div className="w-full h-full p-8 bg-[color:var(--bg-primary)] overflow-auto">
+    <div className="w-full h-full p-4 sm:p-8 bg-[color:var(--bg-primary)] overflow-auto">
       {/* Header */}
       <header className="flex justify-between items-start mb-8">
         <div>
@@ -137,13 +170,12 @@ export default function MembersPage() {
             Members
           </h2>
           <p className="text-sm text-[color:var(--text-secondary)] mt-1">
-            {members.length} member{members.length !== 1 ? "s" : ""} in this workspace
+            {members.length} member{members.length !== 1 ? "s" : ""} in this
+            workspace
           </p>
         </div>
         {isCurrentUserLead && (
-          <Button onClick={() => setInviteOpen(true)}>
-            Invite Member
-          </Button>
+          <Button onClick={() => setInviteOpen(true)}>Invite Member</Button>
         )}
       </header>
 
@@ -158,80 +190,119 @@ export default function MembersPage() {
           ) : members.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Users className="w-10 h-10 text-[color:var(--text-secondary)] mb-3 opacity-40" />
-              <p className="text-sm font-medium text-[color:var(--text-secondary)]">No members found</p>
+              <p className="text-sm font-medium text-[color:var(--text-secondary)]">
+                No members found
+              </p>
             </div>
           ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-[color:var(--border)] bg-[color:var(--bg-primary)]">
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Member</th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Email</th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Role</th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Joined</th>
-                  {isCurrentUserLead && (
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Actions</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((member) => {
-                  const isOwner = !!member.isOwner;
-                  const isSelf = member.userId === currentUser?.id;
-                  const joinedDate = member.joinedAt
-                    ? new Date(member.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                    : "—";
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left">
+                <thead>
+                  <tr className="border-b border-[color:var(--border)] bg-[color:var(--bg-primary)]">
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                      Member
+                    </th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                      Email
+                    </th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                      Role
+                    </th>
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                      Joined
+                    </th>
+                    {isCurrentUserLead && (
+                      <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                        Actions
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => {
+                    const isOwner = !!member.isOwner;
+                    const isSelf = member.userId === currentUser?.id;
+                    const joinedDate = member.joinedAt
+                      ? new Date(member.joinedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "—";
 
-                  return (
-                    <tr
-                      key={member.id || member.userId}
-                      className="border-b border-[color:var(--border)] last:border-0 hover:bg-[color:var(--bg-primary)]/50 transition-colors"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <AvatarFallback name={member.name} />
-                          <div>
-                            <p className="text-sm font-semibold text-[color:var(--text-primary)]">
-                              {member.name}
-                              {isSelf && <span className="ml-1.5 text-[10px] font-normal text-[color:var(--text-secondary)] border border-[color:var(--border)] px-1.5 py-0.5 rounded-full">you</span>}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-sm text-[color:var(--text-secondary)]">{member.email}</td>
-                      <td className="px-5 py-4">
-                        {isCurrentUserLead && !isSelf ? (
-                          <RoleSelect
-                            currentRole={member.role}
-                            isOwner={isOwner}
-                            saving={saving}
-                            onChangeRole={(role) => handleRoleChange(member.userId, role)}
-                          />
-                        ) : (
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${ROLE_STYLES[member.role] || ROLE_STYLES.Viewer}${isOwner ? " opacity-70" : ""}`}>
-                            {member.role}
-                            {isOwner && <span className="ml-1 opacity-60 text-[10px]">(owner)</span>}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-sm text-[color:var(--text-secondary)]">{joinedDate}</td>
-                      {isCurrentUserLead && (
+                    return (
+                      <tr
+                        key={member.id || member.userId}
+                        className="border-b border-[color:var(--border)] last:border-0 hover:bg-[color:var(--bg-primary)]/50 transition-colors"
+                      >
                         <td className="px-5 py-4">
-                          {!isOwner && !isSelf && (
-                            <button
-                              onClick={() => setConfirmRemove({ userId: member.userId, name: member.name })}
-                              className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--danger)] transition-colors"
+                          <div className="flex items-center gap-3">
+                            <AvatarFallback name={member.name} />
+                            <div>
+                              <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+                                {member.name}
+                                {isSelf && (
+                                  <span className="ml-1.5 text-[10px] font-normal text-[color:var(--text-secondary)] border border-[color:var(--border)] px-1.5 py-0.5 rounded-full">
+                                    you
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-[color:var(--text-secondary)]">
+                          {member.email}
+                        </td>
+                        <td className="px-5 py-4">
+                          {isCurrentUserLead && !isSelf ? (
+                            <RoleSelect
+                              currentRole={member.role}
+                              isOwner={isOwner}
+                              saving={saving}
+                              onChangeRole={(role) =>
+                                handleRoleChange(member.userId, role)
+                              }
+                            />
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${ROLE_STYLES[member.role] || ROLE_STYLES.Viewer}${isOwner ? " opacity-70" : ""}`}
                             >
-                              <UserMinus className="w-4 h-4" />
-                              Remove
-                            </button>
+                              {member.role}
+                              {isOwner && (
+                                <span className="ml-1 opacity-60 text-[10px]">
+                                  (owner)
+                                </span>
+                              )}
+                            </span>
                           )}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td className="px-5 py-4 text-sm text-[color:var(--text-secondary)]">
+                          {joinedDate}
+                        </td>
+                        {isCurrentUserLead && (
+                          <td className="px-5 py-4">
+                            {!isOwner && !isSelf && (
+                              <button
+                                onClick={() =>
+                                  setConfirmRemove({
+                                    userId: member.userId,
+                                    name: member.name,
+                                  })
+                                }
+                                className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-[color:var(--text-secondary)] hover:text-[color:var(--danger)] transition-colors"
+                              >
+                                <UserMinus className="w-4 h-4" />
+                                Remove
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>
@@ -240,34 +311,52 @@ export default function MembersPage() {
       {isCurrentUserLead && pendingInvitations.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold text-[color:var(--text-secondary)] uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4" /> Pending Invitations ({pendingInvitations.length})
+            <Clock className="w-4 h-4" /> Pending Invitations (
+            {pendingInvitations.length})
           </h3>
           <div className="bg-[color:var(--bg-surface)] border border-[color:var(--border)] rounded-xl shadow-sm overflow-hidden">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-[color:var(--border)] bg-[color:var(--bg-primary)]">
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Email</th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Role</th>
-                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">Expires</th>
+                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                    Email
+                  </th>
+                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                    Role
+                  </th>
+                  <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                    Expires
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {pendingInvitations.map((inv) => (
-                  <tr key={inv.id} className="border-b border-[color:var(--border)] last:border-0 hover:bg-[color:var(--bg-primary)]/50 transition-colors">
+                  <tr
+                    key={inv.id}
+                    className="border-b border-[color:var(--border)] last:border-0 hover:bg-[color:var(--bg-primary)]/50 transition-colors"
+                  >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <MailOpen className="w-4 h-4 text-[color:var(--text-secondary)]" />
-                        <span className="text-sm text-[color:var(--text-primary)]">{inv.email}</span>
+                        <span className="text-sm text-[color:var(--text-primary)]">
+                          {inv.email}
+                        </span>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${ROLE_STYLES[inv.role] || ROLE_STYLES.Viewer}`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${ROLE_STYLES[inv.role] || ROLE_STYLES.Viewer}`}
+                      >
                         {inv.role}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-sm text-[color:var(--text-secondary)]">
                       {inv.expiresAt
-                        ? new Date(inv.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                        ? new Date(inv.expiresAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
                         : "—"}
                     </td>
                   </tr>
@@ -292,13 +381,24 @@ export default function MembersPage() {
       {confirmRemove && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-[color:var(--bg-surface)] border border-[color:var(--border)] rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
-            <h3 className="text-base font-semibold text-[color:var(--text-primary)] mb-2">Remove member?</h3>
+            <h3 className="text-base font-semibold text-[color:var(--text-primary)] mb-2">
+              Remove member?
+            </h3>
             <p className="text-sm text-[color:var(--text-secondary)] mb-6">
-              <span className="font-medium text-[color:var(--text-primary)]">{confirmRemove.name}</span> will lose access to this workspace immediately.
+              <span className="font-medium text-[color:var(--text-primary)]">
+                {confirmRemove.name}
+              </span>{" "}
+              will lose access to this workspace immediately.
             </p>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setConfirmRemove(null)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleRemove} disabled={saving}>
+              <Button variant="outline" onClick={() => setConfirmRemove(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleRemove}
+                disabled={saving}
+              >
                 {saving ? "Removing…" : "Remove"}
               </Button>
             </div>

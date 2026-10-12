@@ -50,7 +50,9 @@ function ShapeNode({
         x={x}
         y={y}
         draggable={permissions?.canMove}
-        onDragStart={(e) => { e.cancelBubble = true; }}
+        onDragStart={(e) => {
+          e.cancelBubble = true;
+        }}
         onDragMove={(e) => {
           e.cancelBubble = true;
           onDragMove(node.id, e.target.x(), e.target.y());
@@ -61,8 +63,12 @@ function ShapeNode({
         }}
         onClick={handleClick}
         onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
-        onTransform={(e) => permissions?.canResize && onTransform(node.id, e.target)}
-        onTransformEnd={(e) => permissions?.canResize && onTransformEnd(node.id, e.target)}
+        onTransform={(e) =>
+          permissions?.canResize && onTransform(node.id, e.target)
+        }
+        onTransformEnd={(e) =>
+          permissions?.canResize && onTransformEnd(node.id, e.target)
+        }
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
@@ -73,7 +79,7 @@ function ShapeNode({
           stroke={selectionStroke || stroke}
           strokeWidth={selectionWidth || data.strokeWidth || 1.5}
           cornerRadius={data.cornerRadius ?? 8}
-          opacity={isLocked ? 0.82 : data.opacity ?? 1}
+          opacity={isLocked ? 0.82 : (data.opacity ?? 1)}
         />
         {data.label && !isEditing && (
           <Text
@@ -112,12 +118,21 @@ function ShapeNode({
         x={x}
         y={y}
         draggable={permissions?.canMove}
-        onDragMove={(e) => permissions?.canMove && onDragMove(node.id, e.target.x(), e.target.y())}
+        onDragMove={(e) =>
+          permissions?.canMove &&
+          onDragMove(node.id, e.target.x(), e.target.y())
+        }
         onDragEnd={handleDragEnd}
         onClick={handleClick}
         onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
-        onTransform={(e) => permissions?.canResize && onTransform(node.id, e.target)}
-        onTransformEnd={(e) => permissions?.canResize && onTransformEnd(node.id, e.target)}
+        onTap={handleClick}
+        onDblTap={() => permissions?.canEdit && onDoubleClick(node.id)}
+        onTransform={(e) =>
+          permissions?.canResize && onTransform(node.id, e.target)
+        }
+        onTransformEnd={(e) =>
+          permissions?.canResize && onTransformEnd(node.id, e.target)
+        }
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
@@ -126,25 +141,27 @@ function ShapeNode({
           fill={fill}
           stroke={selectionStroke || stroke}
           strokeWidth={selectionWidth || data.strokeWidth || 1.5}
-          opacity={isLocked ? 0.82 : data.opacity ?? 1}
+          opacity={isLocked ? 0.82 : (data.opacity ?? 1)}
         />
-        {data.label && !isEditing && (() => {
-          // Inscribed-square width keeps wrapped text inside the circle's edge.
-          const inscribedWidth = Math.max(24, radius * Math.SQRT2 - 16);
-          return (
-            <Text
-              x={-inscribedWidth / 2}
-              y={-9}
-              width={inscribedWidth}
-              text={data.label}
-              fontSize={13}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#18181B"
-              align="center"
-              wrap="word"
-            />
-          );
-        })()}
+        {data.label &&
+          !isEditing &&
+          (() => {
+            // Inscribed-square width keeps wrapped text inside the circle's edge.
+            const inscribedWidth = Math.max(24, radius * Math.SQRT2 - 16);
+            return (
+              <Text
+                x={-inscribedWidth / 2}
+                y={-9}
+                width={inscribedWidth}
+                text={data.label}
+                fontSize={13}
+                fontFamily="Inter, system-ui, sans-serif"
+                fill="#18181B"
+                align="center"
+                wrap="word"
+              />
+            );
+          })()}
         {isLocked && (
           <Text
             x={-38}
@@ -173,7 +190,9 @@ function ShapeNode({
         x={x}
         y={y}
         draggable={permissions?.canMove}
-        onDragStart={(e) => { e.cancelBubble = true; }}
+        onDragStart={(e) => {
+          e.cancelBubble = true;
+        }}
         onDragMove={(e) => {
           e.cancelBubble = true;
           onDragMove(node.id, e.target.x(), e.target.y());
@@ -184,8 +203,12 @@ function ShapeNode({
         }}
         onClick={handleClick}
         onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
-        onTransform={(e) => permissions?.canResize && onTransform(node.id, e.target)}
-        onTransformEnd={(e) => permissions?.canResize && onTransformEnd(node.id, e.target)}
+        onTransform={(e) =>
+          permissions?.canResize && onTransform(node.id, e.target)
+        }
+        onTransformEnd={(e) =>
+          permissions?.canResize && onTransformEnd(node.id, e.target)
+        }
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
       >
@@ -195,7 +218,7 @@ function ShapeNode({
           fill={fill}
           stroke={selectionStroke || stroke}
           strokeWidth={selectionWidth || data.strokeWidth || 1.5}
-          opacity={isLocked ? 0.82 : data.opacity ?? 1}
+          opacity={isLocked ? 0.82 : (data.opacity ?? 1)}
           listening
         />
         {data.label && !isEditing && (

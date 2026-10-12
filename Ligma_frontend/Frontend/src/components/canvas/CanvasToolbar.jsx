@@ -1,23 +1,36 @@
 import React from "react";
-import { ArrowRight, Circle, Diamond, Lock, MousePointer2, Minus, Settings2, Square, StickyNote, Triangle, Type, Unlock } from "lucide-react";
+import {
+  ArrowRight,
+  Circle,
+  Diamond,
+  Lock,
+  MousePointer2,
+  Minus,
+  Settings2,
+  Square,
+  StickyNote,
+  Triangle,
+  Type,
+  Unlock,
+} from "lucide-react";
 
 const TOOLS = [
-  { id: "select",    label: "Select",    icon: MousePointer2 },
-  { id: "sticky",    label: "Sticky",    icon: StickyNote },
-  { id: "text",      label: "Text",      icon: Type },
-  { id: "rectangle", label: "Rect",      icon: Square },
-  { id: "circle",    label: "Circle",    icon: Circle },
-  { id: "arrow",     label: "Arrow",     icon: ArrowRight },
-  { id: "diamond",   label: "Diamond",   icon: Diamond },
-  { id: "triangle",  label: "Triangle",  icon: Triangle },
-  { id: "line",      label: "Line",      icon: Minus },
+  { id: "select", label: "Select", icon: MousePointer2 },
+  { id: "sticky", label: "Sticky", icon: StickyNote },
+  { id: "text", label: "Text", icon: Type },
+  { id: "rectangle", label: "Rect", icon: Square },
+  { id: "circle", label: "Circle", icon: Circle },
+  { id: "arrow", label: "Arrow", icon: ArrowRight },
+  { id: "diamond", label: "Diamond", icon: Diamond },
+  { id: "triangle", label: "Triangle", icon: Triangle },
+  { id: "line", label: "Line", icon: Minus },
 ];
 
 // const COLORS = [
 //   "#FDE68A", "#BFDBFE", "#FDBA74", "#BBF7D0", "#F9A8D4", "#D8B4FE",
 // ];
 
- function CanvasToolbar({
+function CanvasToolbar({
   activeTool,
   onToolChange,
   activeColor,
@@ -31,9 +44,9 @@ const TOOLS = [
   const tools = canEdit ? TOOLS : TOOLS.filter((tool) => tool.id === "select");
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 top-4 z-20 flex items-center gap-1.5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-2 py-1.5 shadow-[var(--shadow-md)] backdrop-blur-sm">
+    <div className="absolute left-1/2 -translate-x-1/2 top-2 md:top-4 z-20 flex items-center gap-1.5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-2 py-1.5 shadow-[var(--shadow-md)] backdrop-blur-sm max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar">
       {/* Tool buttons */}
-      <div className="flex items-center gap-0.5">
+      <div className="relative flex shrink-0 cursor-pointer flex-col items-center flex items-center gap-0.5">
         {tools.map(({ id, label, icon: Icon }) => {
           const isActive = activeTool === id;
           return (
@@ -50,8 +63,12 @@ const TOOLS = [
                   : "text-[color:var(--foreground-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)]",
               ].join(" ")}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
-              <span className="text-[9px] leading-none opacity-80">{label}</span>
+              <Icon
+                className={`w-4 h-4 ${isActive ? "stroke-[2.2]" : "stroke-[1.8]"}`}
+              />
+              <span className="text-[9px] leading-none opacity-80">
+                {label}
+              </span>
             </button>
           );
         })}
@@ -83,13 +100,17 @@ const TOOLS = [
 
       {/* Lock + Permissions (Lead + selected node) */}
       {selectedNode && isLead && (
-        <div className="flex items-center gap-1 border-l border-[color:var(--border)] pl-2">
+        <div className="relative flex shrink-0 cursor-pointer flex-col items-center flex items-center gap-1 border-l border-[color:var(--border)] pl-2">
           <button
             onClick={onToggleLock}
             title={selectedNode.locked ? "Unlock node" : "Lock node"}
             className="flex cursor-pointer items-center gap-1 rounded-lg border border-[color:var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--foreground-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)] transition-colors"
           >
-            {selectedNode.locked ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+            {selectedNode.locked ? (
+              <Unlock className="h-3.5 w-3.5" />
+            ) : (
+              <Lock className="h-3.5 w-3.5" />
+            )}
             {selectedNode.locked ? "Unlock" : "Lock"}
           </button>
           <button

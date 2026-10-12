@@ -163,18 +163,18 @@ export default function MessageComposer({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Button type="button" variant="outline" className="rounded-2xl" onClick={() => setShowMentions((current) => !current)} disabled={disabled}>
-                <AtSign className="mr-2 h-4 w-4" /> Mentions
+                <AtSign className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Mentions</span>
               </Button>
               <Button type="button" variant="outline" className="rounded-2xl" onClick={() => setShowNodes((current) => !current)} disabled={disabled}>
-                <Link2 className="mr-2 h-4 w-4" /> Node reference
+                <Link2 className="mr-2 h-4 w-4" /><span className="hidden sm:inline">Node reference</span> 
               </Button>
               <Button type="button" variant="outline" className="rounded-2xl opacity-70" disabled>
-                <Paperclip className="mr-2 h-4 w-4" /> Attachments soon
+                <Paperclip className="mr-2 h-4 w-4" /><span className="hidden sm:inline">Attachments soon</span>
               </Button>
             </div>
 
             <Button type="button" onClick={sendMessage} disabled={disabled || !value.trim()} className="rounded-2xl bg-[color:var(--primary)] hover:bg-[color:var(--primary-hover)] px-5 text-[color:var(--primary-foreground)] shadow-lg transition-colors">
-              <SendHorizonal className="mr-2 h-4 w-4" /> Send
+              <SendHorizonal className="mr-2 h-4 w-4" /><span className="hidden sm:inline">Send</span>
             </Button>
           </div>
         </div>

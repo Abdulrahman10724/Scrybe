@@ -33,7 +33,9 @@ function TextNode({
       x={x}
       y={y}
       draggable={permissions?.canMove}
-      onDragStart={(e) => { e.cancelBubble = true; }}
+      onDragStart={(e) => {
+        e.cancelBubble = true;
+      }}
       onDragMove={(e) => {
         e.cancelBubble = true;
         onDragMove(node.id, e.target.x(), e.target.y());
@@ -44,8 +46,14 @@ function TextNode({
       }}
       onClick={() => onClick(node.id)}
       onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
-      onTransform={(e) => permissions?.canResize && onTransform?.(node.id, e.target)}
-      onTransformEnd={(e) => permissions?.canResize && onTransformEnd?.(node.id, e.target)}
+      onTap={() => onClick(node.id)}
+      onDblTap={() => permissions?.canEdit && onDoubleClick(node.id)}
+      onTransform={(e) =>
+        permissions?.canResize && onTransform?.(node.id, e.target)
+      }
+      onTransformEnd={(e) =>
+        permissions?.canResize && onTransformEnd?.(node.id, e.target)
+      }
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -62,7 +70,7 @@ function TextNode({
           dash={[4, 3]}
         />
       )}
- {!isEditing && (
+      {!isEditing && (
         <Text
           x={PADDING}
           y={PADDING}
@@ -75,7 +83,7 @@ function TextNode({
           wrap="word"
         />
       )}
-    {isLocked && (
+      {isLocked && (
         <Text
           x={width - 52}
           y={8}

@@ -6,26 +6,176 @@ import { Play, Pause, RotateCcw, Zap } from "lucide-react";
    FAKE EVENT SEQUENCE — 10 events that rebuild the canvas
 ──────────────────────────────────────────────────────────────── */
 const FAKE_EVENTS = [
-  { id: 0, type: "create", label: "Note created", actor: "Ayesha", actorColor: "#0D9488",
-    node: { id: "n1", x: 40, y: 30, w: 160, h: 72, color: "#FDF6DC", text: "Redesign checkout flow", tag: null } },
-  { id: 1, type: "create", label: "Note created", actor: "Zubair", actorColor: "#EA580C",
-    node: { id: "n2", x: 240, y: 20, w: 150, h: 72, color: "#E2EEF5", text: "Which payment provider?", tag: null } },
-  { id: 2, type: "ai_tag", label: "AI classified", actor: "AI", actorColor: "#D97706",
-    node: { id: "n1", x: 40, y: 30, w: 160, h: 72, color: "#FDF6DC", text: "Redesign checkout flow", tag: "Action Item" } },
-  { id: 3, type: "ai_tag", label: "AI classified", actor: "AI", actorColor: "#D97706",
-    node: { id: "n2", x: 240, y: 20, w: 150, h: 72, color: "#E2EEF5", text: "Which payment provider?", tag: "Open Question" } },
-  { id: 4, type: "create", label: "Task created", actor: "System", actorColor: "#0D9488",
-    node: { id: "t1", x: 40, y: 140, w: 170, h: 60, color: "#CCFBF1", text: "Task → Redesign checkout flow", tag: "→ Board" } },
-  { id: 5, type: "create", label: "Note created", actor: "Ayesha", actorColor: "#0D9488",
-    node: { id: "n3", x: 240, y: 140, w: 160, h: 72, color: "#F7E8E2", text: "Use Stripe — we already have keys", tag: null } },
-  { id: 6, type: "ai_tag", label: "AI classified", actor: "AI", actorColor: "#D97706",
-    node: { id: "n3", x: 240, y: 140, w: 160, h: 72, color: "#F7E8E2", text: "Use Stripe — we already have keys", tag: "Decision" } },
-  { id: 7, type: "move", label: "Node moved", actor: "Zubair", actorColor: "#EA580C",
-    node: { id: "n2", x: 250, y: 30, w: 150, h: 72, color: "#E2EEF5", text: "Which payment provider?", tag: "Open Question" } },
-  { id: 8, type: "create", label: "Note created", actor: "Zubair", actorColor: "#EA580C",
-    node: { id: "n4", x: 140, y: 215, w: 150, h: 66, color: "#DDF0E6", text: "Confirm with finance by Friday", tag: null } },
-  { id: 9, type: "ai_tag", label: "AI classified", actor: "AI", actorColor: "#D97706",
-    node: { id: "n4", x: 140, y: 215, w: 150, h: 66, color: "#DDF0E6", text: "Confirm with finance by Friday", tag: "Action Item" } },
+  {
+    id: 0,
+    type: "create",
+    label: "Note created",
+    actor: "Ayesha",
+    actorColor: "#0D9488",
+    node: {
+      id: "n1",
+      x: 40,
+      y: 30,
+      w: 160,
+      h: 72,
+      color: "#FDF6DC",
+      text: "Redesign checkout flow",
+      tag: null,
+    },
+  },
+  {
+    id: 1,
+    type: "create",
+    label: "Note created",
+    actor: "Zubair",
+    actorColor: "#EA580C",
+    node: {
+      id: "n2",
+      x: 240,
+      y: 20,
+      w: 150,
+      h: 72,
+      color: "#E2EEF5",
+      text: "Which payment provider?",
+      tag: null,
+    },
+  },
+  {
+    id: 2,
+    type: "ai_tag",
+    label: "AI classified",
+    actor: "AI",
+    actorColor: "#D97706",
+    node: {
+      id: "n1",
+      x: 40,
+      y: 30,
+      w: 160,
+      h: 72,
+      color: "#FDF6DC",
+      text: "Redesign checkout flow",
+      tag: "Action Item",
+    },
+  },
+  {
+    id: 3,
+    type: "ai_tag",
+    label: "AI classified",
+    actor: "AI",
+    actorColor: "#D97706",
+    node: {
+      id: "n2",
+      x: 240,
+      y: 20,
+      w: 150,
+      h: 72,
+      color: "#E2EEF5",
+      text: "Which payment provider?",
+      tag: "Open Question",
+    },
+  },
+  {
+    id: 4,
+    type: "create",
+    label: "Task created",
+    actor: "System",
+    actorColor: "#0D9488",
+    node: {
+      id: "t1",
+      x: 40,
+      y: 140,
+      w: 170,
+      h: 60,
+      color: "#CCFBF1",
+      text: "Task → Redesign checkout flow",
+      tag: "→ Board",
+    },
+  },
+  {
+    id: 5,
+    type: "create",
+    label: "Note created",
+    actor: "Ayesha",
+    actorColor: "#0D9488",
+    node: {
+      id: "n3",
+      x: 240,
+      y: 140,
+      w: 160,
+      h: 72,
+      color: "#F7E8E2",
+      text: "Use Stripe — we already have keys",
+      tag: null,
+    },
+  },
+  {
+    id: 6,
+    type: "ai_tag",
+    label: "AI classified",
+    actor: "AI",
+    actorColor: "#D97706",
+    node: {
+      id: "n3",
+      x: 240,
+      y: 140,
+      w: 160,
+      h: 72,
+      color: "#F7E8E2",
+      text: "Use Stripe — we already have keys",
+      tag: "Decision",
+    },
+  },
+  {
+    id: 7,
+    type: "move",
+    label: "Node moved",
+    actor: "Zubair",
+    actorColor: "#EA580C",
+    node: {
+      id: "n2",
+      x: 250,
+      y: 30,
+      w: 150,
+      h: 72,
+      color: "#E2EEF5",
+      text: "Which payment provider?",
+      tag: "Open Question",
+    },
+  },
+  {
+    id: 8,
+    type: "create",
+    label: "Note created",
+    actor: "Zubair",
+    actorColor: "#EA580C",
+    node: {
+      id: "n4",
+      x: 140,
+      y: 215,
+      w: 150,
+      h: 66,
+      color: "#DDF0E6",
+      text: "Confirm with finance by Friday",
+      tag: null,
+    },
+  },
+  {
+    id: 9,
+    type: "ai_tag",
+    label: "AI classified",
+    actor: "AI",
+    actorColor: "#D97706",
+    node: {
+      id: "n4",
+      x: 140,
+      y: 215,
+      w: 150,
+      h: 66,
+      color: "#DDF0E6",
+      text: "Confirm with finance by Friday",
+      tag: "Action Item",
+    },
+  },
 ];
 
 const TAG_COLORS = {
@@ -72,10 +222,19 @@ function CanvasNode({ node }) {
         borderRadius: 10,
         padding: "10px 12px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.10)",
-        border: node.tag ? `1.5px solid ${tagColor}55` : "1.5px solid transparent",
+        border: node.tag
+          ? `1.5px solid ${tagColor}55`
+          : "1.5px solid transparent",
       }}
     >
-      <div style={{ fontSize: 11.5, color: "#374151", lineHeight: 1.45, marginBottom: node.tag ? 7 : 0 }}>
+      <div
+        style={{
+          fontSize: 11.5,
+          color: "#374151",
+          lineHeight: 1.45,
+          marginBottom: node.tag ? 7 : 0,
+        }}
+      >
         {node.text}
       </div>
       {node.tag && (
@@ -147,12 +306,15 @@ export default function TimeTravelSection() {
   };
 
   /* ── Scrubber drag ── */
-  const setFromPointer = useCallback((clientX) => {
-    if (!trackRef.current) return;
-    const rect = trackRef.current.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    setEventIdx(Math.round(pct * MAX));
-  }, [MAX]);
+  const setFromPointer = useCallback(
+    (clientX) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      setEventIdx(Math.round(pct * MAX));
+    },
+    [MAX],
+  );
 
   const onTrackMouseDown = (e) => {
     isDragging.current = true;
@@ -166,7 +328,9 @@ export default function TimeTravelSection() {
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       setFromPointer(clientX);
     };
-    const onUp = () => { isDragging.current = false; };
+    const onUp = () => {
+      isDragging.current = false;
+    };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
     window.addEventListener("touchmove", onMove, { passive: true });
@@ -193,7 +357,6 @@ export default function TimeTravelSection() {
       }}
     >
       <div style={{ maxWidth: 1040, margin: "0 auto" }}>
-
         {/* Header */}
         <motion.div
           initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
@@ -207,8 +370,12 @@ export default function TimeTravelSection() {
             Nothing is ever{" "}
             <span style={{ color: "var(--primary)" }}>lost</span>
           </h2>
-          <p className="section-subheading" style={{ maxWidth: 520, margin: "0 auto" }}>
-            Scrub back to any moment and watch your team's thinking unfold again, exactly as it happened.
+          <p
+            className="section-subheading"
+            style={{ maxWidth: 520, margin: "0 auto" }}
+          >
+            Scrub back to any moment and watch your team's thinking unfold
+            again, exactly as it happened.
           </p>
         </motion.div>
 
@@ -290,9 +457,14 @@ export default function TimeTravelSection() {
                     padding: "3px 10px",
                     borderRadius: 6,
                     border: "1px solid",
-                    borderColor: speed === s ? "var(--primary)" : "var(--border)",
-                    background: speed === s ? "var(--primary-soft)" : "transparent",
-                    color: speed === s ? "var(--primary)" : "var(--foreground-muted)",
+                    borderColor:
+                      speed === s ? "var(--primary)" : "var(--border)",
+                    background:
+                      speed === s ? "var(--primary-soft)" : "transparent",
+                    color:
+                      speed === s
+                        ? "var(--primary)"
+                        : "var(--foreground-muted)",
                     fontSize: 11,
                     fontWeight: 700,
                     cursor: "pointer",
@@ -305,7 +477,14 @@ export default function TimeTravelSection() {
             </div>
 
             {/* Event counter */}
-            <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--foreground-muted)", fontWeight: 500 }}>
+            <div
+              style={{
+                marginLeft: "auto",
+                fontSize: 12,
+                color: "var(--foreground-muted)",
+                fontWeight: 500,
+              }}
+            >
               Event {eventIdx + 1} / {FAKE_EVENTS.length}
             </div>
 
@@ -330,18 +509,34 @@ export default function TimeTravelSection() {
                   border: `1px solid ${currentEvent.actorColor}30`,
                 }}
               >
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: currentEvent.actorColor }} />
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: currentEvent.actorColor,
+                  }}
+                />
                 {currentEvent.actor} · {currentEvent.label}
               </motion.div>
             </AnimatePresence>
           </div>
 
           {/* Timeline track */}
-          <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid var(--border)" }}>
+          <div
+            style={{
+              padding: "16px 20px 12px",
+              borderBottom: "1px solid var(--border)",
+            }}
+          >
             <div
               ref={trackRef}
               onMouseDown={onTrackMouseDown}
-              onTouchStart={(e) => { isDragging.current = true; setPlaying(false); setFromPointer(e.touches[0].clientX); }}
+              onTouchStart={(e) => {
+                isDragging.current = true;
+                setPlaying(false);
+                setFromPointer(e.touches[0].clientX);
+              }}
               style={{
                 position: "relative",
                 height: 8,
@@ -372,12 +567,15 @@ export default function TimeTravelSection() {
                   ev.type === "ai_tag"
                     ? "var(--highlight)"
                     : ev.type === "create" && ev.node.id.startsWith("t")
-                    ? "var(--secondary)"
-                    : "var(--primary)";
+                      ? "var(--secondary)"
+                      : "var(--primary)";
                 return (
                   <div
                     key={i}
-                    onClick={() => { setPlaying(false); setEventIdx(i); }}
+                    onClick={() => {
+                      setPlaying(false);
+                      setEventIdx(i);
+                    }}
                     title={ev.label}
                     style={{
                       position: "absolute",
@@ -418,13 +616,22 @@ export default function TimeTravelSection() {
             </div>
 
             {/* Tick labels */}
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginTop: 8,
+              }}
+            >
               {FAKE_EVENTS.map((ev, i) => (
                 <div
                   key={i}
                   style={{
                     fontSize: 8.5,
-                    color: i <= eventIdx ? "var(--foreground-secondary)" : "var(--foreground-muted)",
+                    color:
+                      i <= eventIdx
+                        ? "var(--foreground-secondary)"
+                        : "var(--foreground-muted)",
                     textAlign: "center",
                     maxWidth: 56,
                     lineHeight: 1.2,
@@ -461,11 +668,16 @@ export default function TimeTravelSection() {
               }}
             />
 
-            <AnimatePresence>
-              {canvasNodes.map((node) => (
-                <CanvasNode key={node.id} node={node} />
-              ))}
-            </AnimatePresence>
+            <div
+              className="tt-canvas-inner"
+              style={{ position: "absolute", inset: 0 }}
+            >
+              <AnimatePresence>
+                {canvasNodes.map((node) => (
+                  <CanvasNode key={node.id} node={node} />
+                ))}
+              </AnimatePresence>
+            </div>
 
             {/* Overlay: empty state */}
             {canvasNodes.length === 0 && (
@@ -499,7 +711,8 @@ export default function TimeTravelSection() {
             color: "var(--foreground-muted)",
           }}
         >
-          Every create, move, tag, and delete is recorded immutably. Scrub to any moment.
+          Every create, move, tag, and delete is recorded immutably. Scrub to
+          any moment.
         </motion.p>
       </div>
     </section>

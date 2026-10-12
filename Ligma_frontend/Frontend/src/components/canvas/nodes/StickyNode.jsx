@@ -43,7 +43,9 @@ function StickyNode({
       x={x}
       y={y}
       draggable={permissions?.canMove}
-      onDragStart={(e) => { e.cancelBubble = true; }}
+      onDragStart={(e) => {
+        e.cancelBubble = true;
+      }}
       onDragMove={(e) => {
         e.cancelBubble = true;
         onDragMove(node.id, e.target.x(), e.target.y());
@@ -54,11 +56,13 @@ function StickyNode({
       }}
       onClick={() => onClick(node.id)}
       onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
+      onTap={() => onClick(node.id)}
+      onDblTap={() => permissions?.canEdit && onDoubleClick(node.id)}
       onTransform={(e) => onTransform(node.id, e.target)}
       onTransformEnd={(e) => onTransformEnd(node.id, e.target)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-       >
+    >
       {/* Shadow */}
       <Rect
         x={3}
@@ -78,7 +82,7 @@ function StickyNode({
         strokeWidth={isSelected ? 2 : 0}
         opacity={isLocked ? 0.82 : 1}
       />
-    {/* Text content — hidden while the HTML textarea overlay is editing
+      {/* Text content — hidden while the HTML textarea overlay is editing
           this node, to avoid a stale "ghost" duplicate showing underneath. */}
       {!isEditing && (
         <Text
@@ -94,7 +98,7 @@ function StickyNode({
           ellipsis
         />
       )}
-    {isLocked && (
+      {isLocked && (
         <Text
           x={width - 52}
           y={8}

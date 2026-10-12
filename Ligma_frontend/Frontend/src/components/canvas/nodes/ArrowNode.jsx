@@ -46,6 +46,8 @@ function ArrowNode({
       }}
       onClick={() => onClick(node.id)}
       onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
+      onTap={() => onClick(node.id)}
+      onDblTap={() => permissions?.canEdit && onDoubleClick(node.id)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -133,10 +135,17 @@ function ArrowNode({
             stroke="#4F46E5"
             strokeWidth={2}
             draggable
-            onDragStart={(e) => { e.cancelBubble = true; }}
+            onDragStart={(e) => {
+              e.cancelBubble = true;
+            }}
             onDragMove={(e) => {
               e.cancelBubble = true;
-              onEndpointDragMove?.(node.id, "start", e.target.x(), e.target.y());
+              onEndpointDragMove?.(
+                node.id,
+                "start",
+                e.target.x(),
+                e.target.y(),
+              );
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;
@@ -152,7 +161,9 @@ function ArrowNode({
             stroke="#4F46E5"
             strokeWidth={2}
             draggable
-            onDragStart={(e) => { e.cancelBubble = true; }}
+            onDragStart={(e) => {
+              e.cancelBubble = true;
+            }}
             onDragMove={(e) => {
               e.cancelBubble = true;
               onEndpointDragMove?.(node.id, "end", e.target.x(), e.target.y());

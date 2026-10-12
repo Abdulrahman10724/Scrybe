@@ -1,11 +1,26 @@
 import { useEffect, useState, useCallback } from "react";
-import { Outlet, useParams, useNavigate } from "react-router-dom";
+import { Outlet, useParams, useNavigate, NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { LayoutDashboard, Milestone, MessageSquare, Users, History, Settings } from "lucide-react";
-
-import { fetchWorkspaceById, clearActiveWorkspace } from "../redux/workspaceSlice";
-import { clearMembers, setMemberRoleLocally, removeMemberLocally } from "../redux/memberSlice";
+import {
+  LayoutDashboard,
+  Milestone,
+  MessageSquare,
+  Users,
+  History,
+  Settings,
+  ArrowLeft,
+} from "lucide-react";
+import MobileBottomNav from "../components/layout/MobileBottomNav";
+import {
+  fetchWorkspaceById,
+  clearActiveWorkspace,
+} from "../redux/workspaceSlice";
+import {
+  clearMembers,
+  setMemberRoleLocally,
+  removeMemberLocally,
+} from "../redux/memberSlice";
 import AccountMenu from "../components/layout/AccountMenu";
 import InvitationInboxMenu from "../components/layout/InvitationInboxMenu";
 import WorkspaceNavigationRail from "../components/layout/WorkspaceNavigationRail";
@@ -59,7 +74,12 @@ export default function WorkspacePage() {
   useEffect(() => {
     const handleRoleUpdated = (payload) => {
       if (payload?.workspaceId !== id || !payload?.member) return;
-      dispatch(setMemberRoleLocally({ userId: payload.member.userId, role: payload.member.role }));
+      dispatch(
+        setMemberRoleLocally({
+          userId: payload.member.userId,
+          role: payload.member.role,
+        }),
+      );
     };
 
     on("member:role-updated", handleRoleUpdated);
@@ -91,11 +111,11 @@ export default function WorkspacePage() {
 
   /* ── Navigation definition — same routes, new icons preserved ─────────── */
   const navigation = [
-    { name: "Canvas",   href: `/workspace/${id}/canvas`,   icon: LayoutDashboard },
-    { name: "Tasks",    href: `/workspace/${id}/tasks`,    icon: Milestone },
-    { name: "Chat",     href: `/workspace/${id}/chat`,     icon: MessageSquare },
-    { name: "Members",  href: `/workspace/${id}/members`,  icon: Users },
-    { name: "History",  href: `/workspace/${id}/history`,  icon: History },
+    { name: "Canvas", href: `/workspace/${id}/canvas`, icon: LayoutDashboard },
+    { name: "Tasks", href: `/workspace/${id}/tasks`, icon: Milestone },
+    { name: "Chat", href: `/workspace/${id}/chat`, icon: MessageSquare },
+    { name: "Members", href: `/workspace/${id}/members`, icon: Users },
+    { name: "History", href: `/workspace/${id}/history`, icon: History },
     { name: "Settings", href: `/workspace/${id}/settings`, icon: Settings },
   ];
 
@@ -104,12 +124,11 @@ export default function WorkspacePage() {
     status === "connected"
       ? "bg-[color:var(--success)]"
       : status === "reconnecting" || status === "connecting"
-      ? "bg-[color:var(--highlight)]"
-      : "bg-[color:var(--foreground-muted)]";
+        ? "bg-[color:var(--highlight)]"
+        : "bg-[color:var(--foreground-muted)]";
 
   return (
-    <div className="flex h-screen bg-[color:var(--background)] text-[color:var(--foreground)] overflow-hidden">
-
+    <div className="flex flex-col lg:flex-row h-[100dvh] bg-[color:var(--background)] text-[color:var(--foreground)] overflow-hidden">
       {/* ── Navigation: single animated slot — rail OR panel, never both ─── */}
       <div
         className="relative hidden shrink-0 transition-[width] duration-200 ease-in-out lg:block"
@@ -130,32 +149,19 @@ export default function WorkspacePage() {
         )}
       </div>
 
-      {/* ── Mobile/tablet: rail always visible, panel overlays on top ────── */}
-      <div className="lg:hidden">
-        <WorkspaceNavigationRail
-          navigation={navigation}
-          isExpanded={isNavExpanded}
-          onToggle={handleToggleNav}
-        />
-      </div>
-      {isNavExpanded && (
-        <div className="lg:hidden">
-          <WorkspaceNavigationPanel
-            navigation={navigation}
-            workspaceName={activeWorkspace?.title}
-            onClose={handleCloseNav}
-          />
-        </div>
-      )}
-
       {/* ── Main Content Area ─────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
         {/* Top Header — 56px */}
-        <header className="h-14 bg-[color:var(--surface)] border-b border-[color:var(--border)] flex items-center justify-between px-5 z-10 shrink-0">
-
+        <header className="h-14 bg-[color:var(--surface)] border-b border-[color:var(--border)] flex items-center justify-between px-3 sm:px-5 z-10 shrink-0">
           {/* Left: workspace info + connection + presence */}
-          <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <NavLink
+              to="/dashboard"
+              className="lg:hidden text-[color:var(--foreground-muted)]"
+              aria-label="Back to dashboard"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </NavLink>
             <div className="min-w-0">
               <h1 className="text-sm font-semibold text-[color:var(--foreground)] truncate leading-tight">
                 {activeWorkspace?.title || "Loading…"}
@@ -165,7 +171,9 @@ export default function WorkspacePage() {
             {/* Connection badge */}
             <div className="hidden items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[color:var(--surface-muted)] px-2.5 py-1 md:flex">
               <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
-              <span className="text-xs text-[color:var(--foreground-muted)] capitalize">{status}</span>
+              <span className="text-xs text-[color:var(--foreground-muted)] capitalize">
+                {status}
+              </span>
             </div>
 
             {/* Presence avatar stack */}
@@ -207,6 +215,8 @@ export default function WorkspacePage() {
           <Outlet />
         </main>
       </div>
+            <MobileBottomNav navigation={navigation} />
+
     </div>
   );
 }

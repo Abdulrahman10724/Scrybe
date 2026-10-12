@@ -76,7 +76,7 @@ export default function DashboardPage() {
               Create and manage your collaborative spaces.
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
             <Button
               variant="outline"
               onClick={() => setHiddenPanelOpen((v) => !v)}

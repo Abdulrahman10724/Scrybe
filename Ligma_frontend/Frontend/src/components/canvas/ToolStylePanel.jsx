@@ -1,8 +1,20 @@
 import React from "react";
 import ColorSwatchPicker from "./ColorSwatchPicker";
 
-export const STROKE_COLORS = ["#1e1e1e", "#e03131", "#2f9e44", "#1971c2", "#f08c00"];
-export const BACKGROUND_COLORS = ["#ffc9c9", "#b2f2bb", "#a5d8ff", "#ffec99", "#eebefa"];
+export const STROKE_COLORS = [
+  "#1e1e1e",
+  "#e03131",
+  "#2f9e44",
+  "#1971c2",
+  "#f08c00",
+];
+export const BACKGROUND_COLORS = [
+  "#ffc9c9",
+  "#b2f2bb",
+  "#a5d8ff",
+  "#ffec99",
+  "#eebefa",
+];
 
 const STROKE_WIDTHS = [
   { value: 1, label: "Thin" },
@@ -34,8 +46,17 @@ function ToolStylePanel({
   if (!tool || tool === "select") return null;
 
   return (
-    <div className="absolute right-4 top-20 z-20 w-56 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3.5 shadow-2xl space-y-4">
-      <ColorSwatchPicker label="Stroke" value={strokeColor} onChange={onStrokeColorChange} colors={STROKE_COLORS} />
+    <div
+      className="absolute z-20 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3.5 shadow-2xl space-y-4
+  left-2 right-2 bottom-20 max-h-[45vh] overflow-y-auto
+  md:left-auto md:right-4 md:top-20 md:bottom-auto md:w-56"
+    >
+      <ColorSwatchPicker
+        label="Stroke"
+        value={strokeColor}
+        onChange={onStrokeColorChange}
+        colors={STROKE_COLORS}
+      />
 
       {HAS_BACKGROUND.has(tool) && (
         <ColorSwatchPicker
@@ -64,7 +85,10 @@ function ToolStylePanel({
                   : "border-[color:var(--border)] hover:border-[color:var(--accent)]/60"
               }`}
             >
-              <span className="w-4 rounded-full bg-[color:var(--text-primary)]" style={{ height: `${opt.value}px` }} />
+              <span
+                className="w-4 rounded-full bg-[color:var(--text-primary)]"
+                style={{ height: `${opt.value}px` }}
+              />
             </button>
           ))}
         </div>

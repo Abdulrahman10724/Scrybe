@@ -2,22 +2,44 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Check, MessageSquare } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { Arrow, Circle, Group, Layer, Line, Rect, Stage, Text, Transformer, Path } from "react-konva";
-import ToolStylePanel, { STROKE_COLORS, BACKGROUND_COLORS } from "../components/canvas/ToolStylePanel";
+import {
+  Arrow,
+  Circle,
+  Group,
+  Layer,
+  Line,
+  Rect,
+  Stage,
+  Text,
+  Transformer,
+  Path,
+} from "react-konva";
+import ToolStylePanel, {
+  STROKE_COLORS,
+  BACKGROUND_COLORS,
+} from "../components/canvas/ToolStylePanel";
 import ColorSwatchPicker from "../components/canvas/ColorSwatchPicker";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
 import useSocket from "../hooks/useSocket";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
-import { computeNodePermissions, useNodePermissions } from "../hooks/useNodePermissions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
+  computeNodePermissions,
+  useNodePermissions,
+} from "../hooks/useNodePermissions";
 import { useWorkspaceRole } from "../hooks/useWorkspaceRole";
 import CanvasChatDrawer from "../components/chat/CanvasChatDrawer";
 
 import { fetchWorkspaceMembers } from "../redux/memberSlice";
 
 import { Button } from "../components/ui/button";
-
-
 
 import {
   fetchCanvasNodes,
@@ -53,13 +75,44 @@ function getCanvasGridColor() {
 
 // Default data payloads for each node type
 const DEFAULT_NODE_DATA = {
-  sticky: { color: "yellow", fill: "#FEF3C7", text: "New note", textColor: "#18181B", width: 200, height: 160 },
-  text: { text: "Text block", fontSize: 16, color: "#18181B", width: 180, height: 48 },
-  rectangle: { width: 160, height: 100, fill: "rgba(0,0,0,0)", stroke: "#000000", label: "" },
+  sticky: {
+    color: "yellow",
+    fill: "#FEF3C7",
+    text: "New note",
+    textColor: "#18181B",
+    width: 200,
+    height: 160,
+  },
+  text: {
+    text: "Text block",
+    fontSize: 16,
+    color: "#18181B",
+    width: 180,
+    height: 48,
+  },
+  rectangle: {
+    width: 160,
+    height: 100,
+    fill: "rgba(0,0,0,0)",
+    stroke: "#000000",
+    label: "",
+  },
   circle: { radius: 60, fill: "rgba(0,0,0,0)", stroke: "#000000", label: "" },
   arrow: { dx: 150, dy: 0, color: "#0F766E", label: "" },
-  diamond: { width: 160, height: 160, fill: "rgba(0,0,0,0)", stroke: "#000000", label: "" },
-  triangle: { width: 160, height: 160, fill: "rgba(0,0,0,0)", stroke: "#000000", label: "" },
+  diamond: {
+    width: 160,
+    height: 160,
+    fill: "rgba(0,0,0,0)",
+    stroke: "#000000",
+    label: "",
+  },
+  triangle: {
+    width: 160,
+    height: 160,
+    fill: "rgba(0,0,0,0)",
+    stroke: "#000000",
+    label: "",
+  },
   line: { dx: 150, dy: 0, color: "#0F766E", label: "" },
 };
 
@@ -72,7 +125,14 @@ const MIN_DIMENSIONS = {
   triangle: { width: 40, height: 40 },
 };
 
-const RESIZABLE_NODE_TYPES = new Set(["sticky", "text", "rectangle", "circle", "diamond", "triangle"]);
+const RESIZABLE_NODE_TYPES = new Set([
+  "sticky",
+  "text",
+  "rectangle",
+  "circle",
+  "diamond",
+  "triangle",
+]);
 
 const COLOR_FIELDS = {
   sticky: ["fill", "textColor"],
@@ -117,7 +177,6 @@ function snapArrowVector(dx, dy, shiftHeld) {
   return { dx, dy };
 }
 
-
 function buildGridLines(stageWidth, stageHeight, scale, offsetX, offsetY) {
   const lines = [];
 
@@ -140,12 +199,18 @@ export default function CanvasPage() {
   const { id: workspaceId } = useParams();
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
-const nodesMap = useSelector((state) => state.canvas.nodes);
-const loading = useSelector((state) => state.canvas.loading);
+  const nodesMap = useSelector((state) => state.canvas.nodes);
+  const loading = useSelector((state) => state.canvas.loading);
   // const { activeWorkspace } = useSelector((state) => state.workspace);
   const { user: currentUser } = useSelector((state) => state.auth);
   const { workspaceRole, isLead, canEditWorkspace } = useWorkspaceRole();
-  const { items: zones, saving: zonesSaving, createZone, updateZone, removeZone } = usePresenceZones(workspaceId);
+  const {
+    items: zones,
+    saving: zonesSaving,
+    createZone,
+    updateZone,
+    removeZone,
+  } = usePresenceZones(workspaceId);
   // status
   const { emit, on, off } = useSocket({ workspaceId, autoJoin: false });
 
@@ -172,7 +237,7 @@ const loading = useSelector((state) => state.canvas.loading);
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [draftAllowedUserIds, setDraftAllowedUserIds] = useState([]);
-const [savingPermissions, setSavingPermissions] = useState(false);
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const { list: members } = useSelector((state) => state.members);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [presenceUsers, setPresenceUsers] = useState([]);
@@ -182,43 +247,48 @@ const [savingPermissions, setSavingPermissions] = useState(false);
   const clipboardNodeRef = useRef(null);
   const dragEmitRef = useRef(0);
   const pendingNodeUpdatesRef = useRef({}); // nodeId -> { x, y, dataPatch }
-const updateRafRef = useRef(null);
+  const updateRafRef = useRef(null);
 
-const flushPendingNodeUpdates = useCallback(() => {
-  updateRafRef.current = null;
-  const pending = pendingNodeUpdatesRef.current;
-  pendingNodeUpdatesRef.current = {};
-  Object.entries(pending).forEach(([nodeId, update]) => {
-    if (update.x !== undefined && update.y !== undefined) {
-      dispatch(updateNodePositionLocally({ nodeId, x: update.x, y: update.y }));
-    }
-    if (update.dataPatch) {
-      dispatch(updateNodeDataLocally({ nodeId, patch: update.dataPatch }));
-    }
-  });
-}, [dispatch]);
+  const flushPendingNodeUpdates = useCallback(() => {
+    updateRafRef.current = null;
+    const pending = pendingNodeUpdatesRef.current;
+    pendingNodeUpdatesRef.current = {};
+    Object.entries(pending).forEach(([nodeId, update]) => {
+      if (update.x !== undefined && update.y !== undefined) {
+        dispatch(
+          updateNodePositionLocally({ nodeId, x: update.x, y: update.y }),
+        );
+      }
+      if (update.dataPatch) {
+        dispatch(updateNodeDataLocally({ nodeId, patch: update.dataPatch }));
+      }
+    });
+  }, [dispatch]);
 
-const scheduleNodeUpdate = useCallback((nodeId, update) => {
-  pendingNodeUpdatesRef.current[nodeId] = {
-    ...pendingNodeUpdatesRef.current[nodeId],
-    ...update,
-  };
-  if (!updateRafRef.current) {
-    updateRafRef.current = requestAnimationFrame(flushPendingNodeUpdates);
-  }
-}, [flushPendingNodeUpdates]);
+  const scheduleNodeUpdate = useCallback(
+    (nodeId, update) => {
+      pendingNodeUpdatesRef.current[nodeId] = {
+        ...pendingNodeUpdatesRef.current[nodeId],
+        ...update,
+      };
+      if (!updateRafRef.current) {
+        updateRafRef.current = requestAnimationFrame(flushPendingNodeUpdates);
+      }
+    },
+    [flushPendingNodeUpdates],
+  );
   const draggingNodeRef = useRef(false);
   const editingNodeIdRef = useRef(null);
   const localCursorRafRef = useRef(null);
-  const draftRectRef = useRef(null);       // sticky / rectangle
-  const draftPolygonRef = useRef(null);    // diamond / triangle
+  const draftRectRef = useRef(null); // sticky / rectangle
+  const draftPolygonRef = useRef(null); // diamond / triangle
   const draftCircleRef = useRef(null);
   const draftTextRectRef = useRef(null);
   const draftTextLabelRef = useRef(null);
-  const draftLineRef = useRef(null);       // "line" tool
+  const draftLineRef = useRef(null); // "line" tool
   const arrowShapeRef = useRef(null);
-  const creationDraftRef = useRef(null);   // mutable {tool, start, current}
-  const arrowDraftRef = useRef(null);      // mutable {start, end}
+  const creationDraftRef = useRef(null); // mutable {tool, start, current}
+  const arrowDraftRef = useRef(null); // mutable {start, end}
   // const resizeEmitRef = useRef(0);
   const cursorEmitRef = useRef(0);
   const textEmitTimerRef = useRef(null);
@@ -245,14 +315,16 @@ const scheduleNodeUpdate = useCallback((nodeId, update) => {
         y: Math.round(point.y),
       });
     },
-    [emit, workspaceId]
+    [emit, workspaceId],
   );
 
   // Detect dark mode
   useEffect(() => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsDarkMode(mql.matches || document.documentElement.classList.contains("dark"));
+    setIsDarkMode(
+      mql.matches || document.documentElement.classList.contains("dark"),
+    );
     const handler = (e) => setIsDarkMode(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
@@ -271,29 +343,43 @@ const scheduleNodeUpdate = useCallback((nodeId, update) => {
   }, []);
 
   // Load nodes
-useEffect(() => {
-  if (!workspaceId) return;
-  dispatch(fetchCanvasNodes(workspaceId));
-  dispatch(fetchWorkspaceMembers(workspaceId));
-  return () => {
-    dispatch(clearCanvas());
-  };
-}, [dispatch, workspaceId]);
+  useEffect(() => {
+    if (!workspaceId) return;
+    dispatch(fetchCanvasNodes(workspaceId));
+    dispatch(fetchWorkspaceMembers(workspaceId));
+    return () => {
+      dispatch(clearCanvas());
+    };
+  }, [dispatch, workspaceId]);
 
-
-
-const nodes = useMemo(() => Object.values(nodesMap), [nodesMap]);
-const sortedNodes = useMemo(
-  () => [...nodes].sort((a, b) => (a.parentNodeId ? 1 : 0) - (b.parentNodeId ? 1 : 0)),
-  [nodes]
-);
+  const nodes = useMemo(() => Object.values(nodesMap), [nodesMap]);
+  const sortedNodes = useMemo(
+    () =>
+      [...nodes].sort(
+        (a, b) => (a.parentNodeId ? 1 : 0) - (b.parentNodeId ? 1 : 0),
+      ),
+    [nodes],
+  );
   const selectedNodeId = selectedNodeIds[0] || null;
   const selectedNode = selectedNodeId ? nodesMap[selectedNodeId] : null;
   const selectedNodePermissions = useNodePermissions(selectedNode);
   const canEditCanvas = canEditWorkspace;
   const gridLines = useMemo(
-    () => buildGridLines(dimensions.width, dimensions.height, viewport.scale, viewport.x, viewport.y),
-    [dimensions.width, dimensions.height, viewport.scale, viewport.x, viewport.y]
+    () =>
+      buildGridLines(
+        dimensions.width,
+        dimensions.height,
+        viewport.scale,
+        viewport.x,
+        viewport.y,
+      ),
+    [
+      dimensions.width,
+      dimensions.height,
+      viewport.scale,
+      viewport.x,
+      viewport.y,
+    ],
   );
   // Re-compute from CSS property on each render (reactive to isDarkMode state changes)
   const gridColor = getCanvasGridColor();
@@ -333,7 +419,12 @@ const sortedNodes = useMemo(
     const data = node.data || {};
     if (node.type === "circle") {
       const radius = data.radius || DEFAULT_NODE_DATA.circle.radius;
-      return { x: node.x - radius, y: node.y - radius, width: radius * 2, height: radius * 2 };
+      return {
+        x: node.x - radius,
+        y: node.y - radius,
+        width: radius * 2,
+        height: radius * 2,
+      };
     }
 
     if (node.type === "line") {
@@ -365,19 +456,32 @@ const sortedNodes = useMemo(
       };
     }
 
-    if (node.type === "rectangle" || node.type === "diamond" || node.type === "triangle") {
+    if (
+      node.type === "rectangle" ||
+      node.type === "diamond" ||
+      node.type === "triangle"
+    ) {
       return {
         x: node.x,
         y: node.y,
-        width: data.width || DEFAULT_NODE_DATA[node.type]?.width || DEFAULT_NODE_DATA.rectangle.width,
-        height: data.height || DEFAULT_NODE_DATA[node.type]?.height || DEFAULT_NODE_DATA.rectangle.height,
+        width:
+          data.width ||
+          DEFAULT_NODE_DATA[node.type]?.width ||
+          DEFAULT_NODE_DATA.rectangle.width,
+        height:
+          data.height ||
+          DEFAULT_NODE_DATA[node.type]?.height ||
+          DEFAULT_NODE_DATA.rectangle.height,
       };
     }
 
     return null;
   }, []);
 
-  const selectedNodeBounds = useMemo(() => getNodeBounds(selectedNode), [getNodeBounds, selectedNode]);
+  const selectedNodeBounds = useMemo(
+    () => getNodeBounds(selectedNode),
+    [getNodeBounds, selectedNode],
+  );
 
   // const selectedNodeType = selectedNode?.type || null;
 
@@ -404,28 +508,29 @@ const sortedNodes = useMemo(
   }, []);
 
   useEffect(() => {
-  const transformer = transformerRef.current;
-  const stage = stageRef.current;
-  const currentNode = latestNodesRef.current[selectedNodeId];   // ref se, dependency nahi
+    const transformer = transformerRef.current;
+    const stage = stageRef.current;
+    const currentNode = latestNodesRef.current[selectedNodeId]; // ref se, dependency nahi
 
-  if (
-    !transformer ||
-    !stage ||
-    !selectedNodeId ||
-    !currentNode ||
-    !RESIZABLE_NODE_TYPES.has(currentNode.type) ||
-    !selectedNodePermissions.canResize
-  ) {
-    transformer?.nodes([]);
-    return;
-  }
+    if (
+      !transformer ||
+      !stage ||
+      !selectedNodeId ||
+      !currentNode ||
+      !RESIZABLE_NODE_TYPES.has(currentNode.type) ||
+      !selectedNodePermissions.canResize
+    ) {
+      transformer?.nodes([]);
+      return;
+    }
 
-  const selectedShape = stage.findOne(`#node-${selectedNodeId}`);
-  if (selectedShape) {
-    transformer.nodes([selectedShape]);
-    transformer.getLayer()?.batchDraw();
-  }
-}, [selectedNodeId, selectedNode?.type, selectedNodePermissions.canResize]);useEffect(() => {
+    const selectedShape = stage.findOne(`#node-${selectedNodeId}`);
+    if (selectedShape) {
+      transformer.nodes([selectedShape]);
+      transformer.getLayer()?.batchDraw();
+    }
+  }, [selectedNodeId, selectedNode?.type, selectedNodePermissions.canResize]);
+  useEffect(() => {
     if (editingNodeId && !selectedNodePermissions.canEdit) {
       setEditingNodeId(null);
     }
@@ -433,61 +538,108 @@ const sortedNodes = useMemo(
 
   useEffect(() => {
     const handleNodeCreated = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.node) {
         dispatch(upsertNodeLocally(payload.node));
       }
     };
 
     const handleNodeUpdated = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.node) {
         dispatch(upsertNodeLocally(payload.node));
       }
     };
 
     const handleNodeLocked = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.node) {
         dispatch(upsertNodeLocally(payload.node));
       }
     };
 
     const handleNodeUnlocked = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.node) {
         dispatch(upsertNodeLocally(payload.node));
       }
     };
 
     const handleNodePermissionsUpdated = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.node) {
         dispatch(upsertNodeLocally(payload.node));
       }
     };
 
     const handleNodeDeleted = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.nodeId) {
         dispatch(removeNodeLocally(payload.nodeId));
       }
     };
 
     const handleNodeDrag = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
-      if (payload?.nodeId && typeof payload?.x === "number" && typeof payload?.y === "number") {
-        dispatch(updateNodePositionLocally({ nodeId: payload.nodeId, x: payload.x, y: payload.y }));
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
+      if (
+        payload?.nodeId &&
+        typeof payload?.x === "number" &&
+        typeof payload?.y === "number"
+      ) {
+        dispatch(
+          updateNodePositionLocally({
+            nodeId: payload.nodeId,
+            x: payload.x,
+            y: payload.y,
+          }),
+        );
       }
     };
 
     const handleNodeText = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.nodeId && typeof payload?.value === "string") {
         const node = latestNodesRef.current[payload.nodeId];
         if (!node) return;
         const textKey = NODE_TEXT_KEYS[node.type];
-        dispatch(updateNodeDataLocally({ nodeId: payload.nodeId, patch: { [textKey]: payload.value } }));
+        dispatch(
+          updateNodeDataLocally({
+            nodeId: payload.nodeId,
+            patch: { [textKey]: payload.value },
+          }),
+        );
 
         // Collaborative live-sync: if we are ALSO currently editing this exact
         // node, mirror the incoming keystroke into our own textarea so both
@@ -499,27 +651,60 @@ const sortedNodes = useMemo(
       }
     };
     const handleNodeResize = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.nodeId) {
-        dispatch(updateNodePositionLocally({ nodeId: payload.nodeId, x: payload.x, y: payload.y }));
-        dispatch(updateNodeDataLocally({ nodeId: payload.nodeId, patch: payload.data || {} }));
+        dispatch(
+          updateNodePositionLocally({
+            nodeId: payload.nodeId,
+            x: payload.x,
+            y: payload.y,
+          }),
+        );
+        dispatch(
+          updateNodeDataLocally({
+            nodeId: payload.nodeId,
+            patch: payload.data || {},
+          }),
+        );
       }
     };
 
     const handleRemoteDraft = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       setRemoteDraft(payload?.draft || null);
     };
     const handleNodeData = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.actorId === currentUser?.id) return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.actorId === currentUser?.id
+      )
+        return;
       if (payload?.nodeId && payload?.patch) {
-        dispatch(updateNodeDataLocally({ nodeId: payload.nodeId, patch: payload.patch }));
+        dispatch(
+          updateNodeDataLocally({
+            nodeId: payload.nodeId,
+            patch: payload.patch,
+          }),
+        );
       }
     };
 
     const handleCursor = (payload) => {
-      if (payload?.workspaceId !== workspaceId || payload?.userId === currentUser?.id) return;
-      if (typeof payload?.x !== "number" || typeof payload?.y !== "number") return;
+      if (
+        payload?.workspaceId !== workspaceId ||
+        payload?.userId === currentUser?.id
+      )
+        return;
+      if (typeof payload?.x !== "number" || typeof payload?.y !== "number")
+        return;
 
       setRemoteCursors((previous) => ({
         ...previous,
@@ -552,7 +737,6 @@ const sortedNodes = useMemo(
       off("canvas:draft", handleRemoteDraft);
       off("canvas:data", handleNodeData);
       off("workspace:cursor", handleCursor);
-
     };
   }, [currentUser?.id, dispatch, off, on, workspaceId]);
 
@@ -587,7 +771,9 @@ const sortedNodes = useMemo(
         event.preventDefault();
         const ids = [...selectedNodeIds];
         for (const nodeId of ids) {
-          const result = await dispatch(deleteCanvasNode({ workspaceId, nodeId }));
+          const result = await dispatch(
+            deleteCanvasNode({ workspaceId, nodeId }),
+          );
           if (deleteCanvasNode.rejected.match(result)) {
             toast.error(result.payload || "Failed to delete node");
             break;
@@ -621,7 +807,9 @@ const sortedNodes = useMemo(
           data: { ...(source.data || {}) },
         };
 
-        const result = await dispatch(createCanvasNode({ workspaceId, payload }));
+        const result = await dispatch(
+          createCanvasNode({ workspaceId, payload }),
+        );
         if (createCanvasNode.rejected.match(result)) {
           toast.error(result.payload || "Failed to duplicate node");
         }
@@ -661,39 +849,48 @@ const sortedNodes = useMemo(
   }, [activeTool, canEditCanvas]);
 
   // Wheel zoom
-  const handleWheel = useCallback((e) => {
-    e.evt.preventDefault();
-    const stage = stageRef.current;
-    if (!stage) return;
+  const handleWheel = useCallback(
+    (e) => {
+      e.evt.preventDefault();
+      const stage = stageRef.current;
+      if (!stage) return;
 
-    const oldScale = viewport.scale;
-    const pointer = stage.getPointerPosition();
+      const oldScale = viewport.scale;
+      const pointer = stage.getPointerPosition();
 
-    const mousePointTo = {
-      x: (pointer.x - viewport.x) / oldScale,
-      y: (pointer.y - viewport.y) / oldScale,
-    };
+      const mousePointTo = {
+        x: (pointer.x - viewport.x) / oldScale,
+        y: (pointer.y - viewport.y) / oldScale,
+      };
 
-    const direction = e.evt.deltaY > 0 ? -1 : 1;
-    const factor = 1.06;
-    const newScale = Math.max(0.1, Math.min(5, direction > 0 ? oldScale * factor : oldScale / factor));
+      const direction = e.evt.deltaY > 0 ? -1 : 1;
+      const factor = 1.06;
+      const newScale = Math.max(
+        0.1,
+        Math.min(5, direction > 0 ? oldScale * factor : oldScale / factor),
+      );
 
-    setViewport({
-      scale: newScale,
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
-    });
-  }, [viewport]);
+      setViewport({
+        scale: newScale,
+        x: pointer.x - mousePointTo.x * newScale,
+        y: pointer.y - mousePointTo.y * newScale,
+      });
+    },
+    [viewport],
+  );
 
-const buildPresetData = useCallback(
+  const buildPresetData = useCallback(
     (tool, size = {}) => {
-      const width = Math.max(24, size.width || 0);
-      const height = Math.max(24, size.height || 0);
+      const width = size.width && size.width >= 24 ? size.width : 0;
+      const height = size.height && size.height >= 24 ? size.height : 0;
 
       if (tool === "sticky") {
         return {
           ...DEFAULT_NODE_DATA.sticky,
-          fill: toolFillColor === "transparent" ? DEFAULT_NODE_DATA.sticky.fill : toolFillColor,
+          fill:
+            toolFillColor === "transparent"
+              ? DEFAULT_NODE_DATA.sticky.fill
+              : toolFillColor,
           textColor: DEFAULT_NODE_DATA.sticky.textColor,
           width: width || DEFAULT_NODE_DATA.sticky.width,
           height: height || DEFAULT_NODE_DATA.sticky.height,
@@ -712,7 +909,8 @@ const buildPresetData = useCallback(
       if (tool === "rectangle") {
         return {
           ...DEFAULT_NODE_DATA.rectangle,
-          fill: toolFillColor === "transparent" ? "rgba(0,0,0,0)" : toolFillColor,
+          fill:
+            toolFillColor === "transparent" ? "rgba(0,0,0,0)" : toolFillColor,
           stroke: toolStrokeColor,
           strokeWidth: toolStrokeWidth,
           cornerRadius: toolEdges === "round" ? 8 : 0,
@@ -723,10 +921,12 @@ const buildPresetData = useCallback(
       }
 
       if (tool === "diamond" || tool === "triangle") {
-        const sizeValue = Math.max(width, height) || DEFAULT_NODE_DATA[tool].width;
+        const sizeValue =
+          Math.max(width, height) || DEFAULT_NODE_DATA[tool].width;
         return {
           ...DEFAULT_NODE_DATA[tool],
-          fill: toolFillColor === "transparent" ? "rgba(0,0,0,0)" : toolFillColor,
+          fill:
+            toolFillColor === "transparent" ? "rgba(0,0,0,0)" : toolFillColor,
           stroke: toolStrokeColor,
           strokeWidth: toolStrokeWidth,
           opacity: toolOpacity,
@@ -736,10 +936,15 @@ const buildPresetData = useCallback(
       }
 
       if (tool === "circle") {
-        const radius = Math.max(24, Math.round(Math.max(width, height) / 2) || DEFAULT_NODE_DATA.circle.radius);
+        const radius = Math.max(
+          24,
+          Math.round(Math.max(width, height) / 2) ||
+            DEFAULT_NODE_DATA.circle.radius,
+        );
         return {
           ...DEFAULT_NODE_DATA.circle,
-          fill: toolFillColor === "transparent" ? "rgba(0,0,0,0)" : toolFillColor,
+          fill:
+            toolFillColor === "transparent" ? "rgba(0,0,0,0)" : toolFillColor,
           stroke: toolStrokeColor,
           strokeWidth: toolStrokeWidth,
           opacity: toolOpacity,
@@ -765,7 +970,7 @@ const buildPresetData = useCallback(
 
       return DEFAULT_NODE_DATA[tool] || {};
     },
-    [toolFillColor, toolStrokeColor, toolStrokeWidth, toolEdges, toolOpacity]
+    [toolFillColor, toolStrokeColor, toolStrokeWidth, toolEdges, toolOpacity],
   );
 
   const commitCreationDraft = useCallback(
@@ -789,16 +994,21 @@ const buildPresetData = useCallback(
           }),
         };
 
-        const result = await dispatch(createCanvasNode({ workspaceId, payload }));
+        const result = await dispatch(
+          createCanvasNode({ workspaceId, payload }),
+        );
         if (createCanvasNode.rejected.match(result)) {
           toast.error(result.payload || "Failed to create node");
         }
         return;
       }
 
-      const size = draft.tool === "circle" || draft.tool === "diamond" || draft.tool === "triangle"
-        ? { width: Math.max(width, height), height: Math.max(width, height) }
-        : { width, height };
+      const size =
+        draft.tool === "circle" ||
+        draft.tool === "diamond" ||
+        draft.tool === "triangle"
+          ? { width: Math.max(width, height), height: Math.max(width, height) }
+          : { width, height };
 
       const payload = {
         type: draft.tool,
@@ -812,7 +1022,7 @@ const buildPresetData = useCallback(
         toast.error(result.payload || "Failed to create node");
       }
     },
-    [buildPresetData, dispatch, workspaceId]
+    [buildPresetData, dispatch, workspaceId],
   );
 
   const handleEditorSave = useCallback(async () => {
@@ -827,14 +1037,13 @@ const buildPresetData = useCallback(
     }
     pendingTextValueRef.current = null;
 
-
     const node = nodesMap[editingNodeId];
     if (!node) {
       savingTextRef.current = false;
       return;
     }
 
-    if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canEdit) {
+    if (!computeNodePermissions(node, workspaceRole, currentUser?.id).canEdit) {
       savingTextRef.current = false;
       setEditingNodeId(null);
       return;
@@ -848,7 +1057,7 @@ const buildPresetData = useCallback(
         workspaceId,
         nodeId: editingNodeId,
         payload: { data: nextData },
-      })
+      }),
     );
 
     savingTextRef.current = false;
@@ -859,8 +1068,15 @@ const buildPresetData = useCallback(
     }
 
     setEditingNodeId(null);
-  }, [dispatch, editingNodeId, editingValue, nodesMap, workspaceId, workspaceRole,currentUser?.id]);
-
+  }, [
+    dispatch,
+    editingNodeId,
+    editingValue,
+    nodesMap,
+    workspaceId,
+    workspaceRole,
+    currentUser?.id,
+  ]);
 
   const handleStagePointerDown = useCallback(
     async (e) => {
@@ -877,7 +1093,7 @@ const buildPresetData = useCallback(
       const point = getCanvasPoint();
       if (!point) return;
 
-     if (activeTool === "arrow") {
+      if (activeTool === "arrow") {
         setSelectedNodeIds([]);
         setEditingNodeId(null);
         setCreationDraft(null);
@@ -899,9 +1115,13 @@ const buildPresetData = useCallback(
       arrowDraftRef.current = null;
       emit("canvas:draft", { workspaceId, draft: null });
       setCreationDraft({ tool: activeTool, start: point, current: point });
-      creationDraftRef.current = { tool: activeTool, start: point, current: point };
+      creationDraftRef.current = {
+        tool: activeTool,
+        start: point,
+        current: point,
+      };
     },
-    [activeTool, canEditCanvas, getCanvasPoint]
+    [activeTool, canEditCanvas, getCanvasPoint],
   );
 
   const draftEmitTimerRef = useRef(null);
@@ -921,18 +1141,28 @@ const buildPresetData = useCallback(
     if (arrowDraft && activeTool === "arrow") {
       const rawDx = point.x - arrowDraft.start.x;
       const rawDy = point.y - arrowDraft.start.y;
-      const { dx: snappedDx, dy: snappedDy } = snapArrowVector(rawDx, rawDy, isShiftPressed);
+      const { dx: snappedDx, dy: snappedDy } = snapArrowVector(
+        rawDx,
+        rawDy,
+        isShiftPressed,
+      );
 
       arrowDraftRef.current = {
         start: arrowDraft.start,
-        end: { x: arrowDraft.start.x + snappedDx, y: arrowDraft.start.y + snappedDy },
+        end: {
+          x: arrowDraft.start.x + snappedDx,
+          y: arrowDraft.start.y + snappedDy,
+        },
       };
       arrowShapeRef.current?.setAttrs({ points: [0, 0, snappedDx, snappedDy] });
       stageRef.current?.batchDraw();
 
       if (!draftEmitTimerRef.current) {
         draftEmitTimerRef.current = setTimeout(() => {
-          emit("canvas:draft", { workspaceId, draft: { type: "arrow", start: arrowDraft.start, end: point } });
+          emit("canvas:draft", {
+            workspaceId,
+            draft: { type: "arrow", start: arrowDraft.start, end: point },
+          });
           draftEmitTimerRef.current = null;
         }, 50);
       }
@@ -950,32 +1180,70 @@ const buildPresetData = useCallback(
       if (tool === "sticky" || tool === "rectangle") {
         draftRectRef.current?.setAttrs({ x: left, y: top, width, height });
       } else if (tool === "diamond" || tool === "triangle") {
-        const points = tool === "diamond"
-          ? [width / 2, 0, width, height / 2, width / 2, height, 0, height / 2]
-          : [width / 2, 0, width, height, 0, height];
+        const points =
+          tool === "diamond"
+            ? [
+                width / 2,
+                0,
+                width,
+                height / 2,
+                width / 2,
+                height,
+                0,
+                height / 2,
+              ]
+            : [width / 2, 0, width, height, 0, height];
         draftPolygonRef.current?.setAttrs({ x: left, y: top, points });
       } else if (tool === "text") {
         const boxW = Math.max(width, 180);
         const boxH = Math.max(height, 48);
-        draftTextRectRef.current?.setAttrs({ x: left, y: top, width: boxW, height: boxH });
-        draftTextLabelRef.current?.setAttrs({ x: left + 12, y: top + 10, width: boxW - 24, height: boxH - 20 });
+        draftTextRectRef.current?.setAttrs({
+          x: left,
+          y: top,
+          width: boxW,
+          height: boxH,
+        });
+        draftTextLabelRef.current?.setAttrs({
+          x: left + 12,
+          y: top + 10,
+          width: boxW - 24,
+          height: boxH - 20,
+        });
       } else if (tool === "circle") {
         const radius = Math.max(width, height) / 2;
-        draftCircleRef.current?.setAttrs({ x: left + width / 2, y: top + height / 2, radius });
+        draftCircleRef.current?.setAttrs({
+          x: left + width / 2,
+          y: top + height / 2,
+          radius,
+        });
       } else if (tool === "line") {
-        draftLineRef.current?.setAttrs({ points: [0, 0, point.x - start.x, point.y - start.y] });
+        draftLineRef.current?.setAttrs({
+          points: [0, 0, point.x - start.x, point.y - start.y],
+        });
       }
 
       stageRef.current?.batchDraw();
 
       if (!draftEmitTimerRef.current) {
         draftEmitTimerRef.current = setTimeout(() => {
-          emit("canvas:draft", { workspaceId, draft: { ...creationDraft, current: point } });
+          emit("canvas:draft", {
+            workspaceId,
+            draft: { ...creationDraft, current: point },
+          });
           draftEmitTimerRef.current = null;
         }, 50);
       }
     }
-  }, [activeTool, arrowDraft, creationDraft, emitCursorPosition, getCanvasPoint, isShiftPressed, emit, workspaceId]);
+  }, [
+    activeTool,
+    arrowDraft,
+    creationDraft,
+    emitCursorPosition,
+    getCanvasPoint,
+    isShiftPressed,
+    emit,
+    workspaceId,
+  ]);
 
   const handleStagePointerUp = useCallback(async () => {
     if (!canEditCanvas) {
@@ -1022,7 +1290,93 @@ const buildPresetData = useCallback(
       await commitCreationDraft(draft);
       setActiveTool("select");
     }
-  }, [activeTool, arrowDraft, canEditCanvas, commitCreationDraft, creationDraft, dispatch, workspaceId, emit]);
+  }, [
+    activeTool,
+    arrowDraft,
+    canEditCanvas,
+    commitCreationDraft,
+    creationDraft,
+    dispatch,
+    workspaceId,
+    emit,
+  ]);
+  // ───────── TOUCH SUPPORT ─────────
+  const lastTouchRef = useRef(0);
+  const lastPinchRef = useRef(null);
+
+  // Touch ke baad browser fake mouse events bhi bhejta hai, unhe ignore karo (double node na bane)
+  const isEmulatedMouse = () => Date.now() - lastTouchRef.current < 800;
+
+  const handleTouchStart = useCallback(
+    (e) => {
+      lastTouchRef.current = Date.now();
+      if (e.evt.touches.length >= 2) {
+        // 2 ungli = pinch zoom: koi bhi draw cancel
+        setCreationDraft(null);
+        creationDraftRef.current = null;
+        setArrowDraft(null);
+        arrowDraftRef.current = null;
+        stageRef.current?.stopDrag();
+        lastPinchRef.current = null;
+        return;
+      }
+      handleStagePointerDown(e);
+    },
+    [handleStagePointerDown],
+  );
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      lastTouchRef.current = Date.now();
+      const touches = e.evt.touches;
+
+      if (touches.length === 2) {
+        e.evt.preventDefault();
+        const rect = stageRef.current.container().getBoundingClientRect();
+        const p1 = {
+          x: touches[0].clientX - rect.left,
+          y: touches[0].clientY - rect.top,
+        };
+        const p2 = {
+          x: touches[1].clientX - rect.left,
+          y: touches[1].clientY - rect.top,
+        };
+        const center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const last = lastPinchRef.current;
+        lastPinchRef.current = { center, dist };
+        if (!last || !last.dist) return;
+
+        setViewport((v) => {
+          const scale = Math.max(
+            0.1,
+            Math.min(5, v.scale * (dist / last.dist)),
+          );
+          const pointTo = {
+            x: (last.center.x - v.x) / v.scale,
+            y: (last.center.y - v.y) / v.scale,
+          };
+          return {
+            scale,
+            x: center.x - pointTo.x * scale,
+            y: center.y - pointTo.y * scale,
+          };
+        });
+        return;
+      }
+      handleStagePointerMove();
+    },
+    [handleStagePointerMove],
+  );
+
+  const handleTouchEnd = useCallback(
+    (e) => {
+      lastTouchRef.current = Date.now();
+      lastPinchRef.current = null;
+      if (e.evt.touches.length === 0) handleStagePointerUp();
+    },
+    [handleStagePointerUp],
+  );
   // Stage click → place node (if tool !== select)
   const handleStageClick = useCallback(
     (e) => {
@@ -1041,13 +1395,15 @@ const buildPresetData = useCallback(
         return;
       }
     },
-    [activeTool]
+    [activeTool],
   );
 
- const sendDragUpdate = useCallback(
+  const sendDragUpdate = useCallback(
     async (nodeId, x, y, parentNodeId) => {
       const node = nodesMap[nodeId];
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canMove) {
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canMove
+      ) {
         return;
       }
 
@@ -1065,7 +1421,7 @@ const buildPresetData = useCallback(
       }
 
       const result = await dispatch(
-        updateCanvasNode({ workspaceId, nodeId, payload })
+        updateCanvasNode({ workspaceId, nodeId, payload }),
       );
 
       if (updateCanvasNode.rejected.match(result)) {
@@ -1077,32 +1433,42 @@ const buildPresetData = useCallback(
       const pending = dragPendingRef.current[nodeId];
       if (pending) {
         dragPendingRef.current[nodeId] = null;
-        dispatch(updateNodePositionLocally({ nodeId, x: pending.x, y: pending.y }));
-        
+        dispatch(
+          updateNodePositionLocally({ nodeId, x: pending.x, y: pending.y }),
+        );
+
         sendDragUpdate(nodeId, pending.x, pending.y, pending.parentNodeId);
       }
     },
-    [dispatch, nodesMap, workspaceId, workspaceRole,currentUser?.id]
+    [dispatch, nodesMap, workspaceId, workspaceRole, currentUser?.id],
   );
- const handleNodeDragEnd = useCallback(
+  const handleNodeDragEnd = useCallback(
     (nodeId, x, y) => {
       const node = nodesMap[nodeId];
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canMove) {
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canMove
+      ) {
         return;
       }
 
       draggingNodeRef.current = false;
       const stage = stageRef.current;
       if (stage) {
-        stage.container().style.cursor = activeTool === "select" ? "grab" : "crosshair";
+        stage.container().style.cursor =
+          activeTool === "select" ? "grab" : "crosshair";
       }
 
       const deltaX = x - node.x;
       const deltaY = y - node.y;
 
-     delete pendingNodeUpdatesRef.current[nodeId];
-dispatch(updateNodePositionLocally({ nodeId, x, y }));
-emit("canvas:drag", { workspaceId, nodeId, x: Math.round(x), y: Math.round(y) });
+      delete pendingNodeUpdatesRef.current[nodeId];
+      dispatch(updateNodePositionLocally({ nodeId, x, y }));
+      emit("canvas:drag", {
+        workspaceId,
+        nodeId,
+        x: Math.round(x),
+        y: Math.round(y),
+      });
 
       // Text nodes can be nested inside sticky/rectangle/circle containers.
       let parentNodeId = node.parentNodeId || null;
@@ -1112,7 +1478,12 @@ emit("canvas:drag", { workspaceId, nodeId, x: Math.round(x), y: Math.round(y) })
           if (!["sticky", "rectangle", "circle"].includes(n.type)) return false;
           const bounds = getNodeBounds(n);
           if (!bounds) return false;
-          return x >= bounds.x && x <= bounds.x + bounds.width && y >= bounds.y && y <= bounds.y + bounds.height;
+          return (
+            x >= bounds.x &&
+            x <= bounds.x + bounds.width &&
+            y >= bounds.y &&
+            y <= bounds.y + bounds.height
+          );
         });
         parentNodeId = dropTarget?.id || null;
       }
@@ -1125,19 +1496,37 @@ emit("canvas:drag", { workspaceId, nodeId, x: Math.round(x), y: Math.round(y) })
         children.forEach((child) => {
           const childNextX = child.x + deltaX;
           const childNextY = child.y + deltaY;
-          dispatch(updateNodePositionLocally({ nodeId: child.id, x: childNextX, y: childNextY }));
+          dispatch(
+            updateNodePositionLocally({
+              nodeId: child.id,
+              x: childNextX,
+              y: childNextY,
+            }),
+          );
           sendDragUpdate(child.id, childNextX, childNextY, child.parentNodeId);
         });
       }
     },
-    [activeTool, dispatch, emit, getNodeBounds, nodes, nodesMap, sendDragUpdate, workspaceId, workspaceRole,currentUser?.id]
+    [
+      activeTool,
+      dispatch,
+      emit,
+      getNodeBounds,
+      nodes,
+      nodesMap,
+      sendDragUpdate,
+      workspaceId,
+      workspaceRole,
+      currentUser?.id,
+    ],
   );
-
 
   const handleNodeDragMove = useCallback(
     (nodeId, x, y) => {
       const node = nodesMap[nodeId];
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canMove) {
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canMove
+      ) {
         return;
       }
 
@@ -1150,59 +1539,79 @@ emit("canvas:drag", { workspaceId, nodeId, x: Math.round(x), y: Math.round(y) })
         stage.container().style.cursor = "move";
       }
 
-     const deltaX = x - node.x;
-const deltaY = y - node.y;
+      const deltaX = x - node.x;
+      const deltaY = y - node.y;
 
-scheduleNodeUpdate(nodeId, { x, y });
+      scheduleNodeUpdate(nodeId, { x, y });
 
-if (node.type !== "text") {
-  const children = nodes.filter((n) => n.parentNodeId === nodeId);
-  children.forEach((child) => {
-    scheduleNodeUpdate(child.id, { x: child.x + deltaX, y: child.y + deltaY });
-  });
-}
+      if (node.type !== "text") {
+        const children = nodes.filter((n) => n.parentNodeId === nodeId);
+        children.forEach((child) => {
+          scheduleNodeUpdate(child.id, {
+            x: child.x + deltaX,
+            y: child.y + deltaY,
+          });
+        });
+      }
 
       const now = Date.now();
       if (now - dragEmitRef.current > 80) {
         dragEmitRef.current = now;
-        emit("canvas:drag", { workspaceId, nodeId, x: Math.round(x), y: Math.round(y) });
+        emit("canvas:drag", {
+          workspaceId,
+          nodeId,
+          x: Math.round(x),
+          y: Math.round(y),
+        });
       }
     },
-    [dispatch, emit, nodes, nodesMap, workspaceId, workspaceRole,currentUser?.id]
+    [
+      dispatch,
+      emit,
+      nodes,
+      nodesMap,
+      workspaceId,
+      workspaceRole,
+      currentUser?.id,
+    ],
   );
-
+const lastNodeClickRef = useRef({ id: null, t: 0 });
   const handleNodeClick = useCallback(
-    async (nodeId, isAdditiveSelection) => {
-      if (editingNodeId && editingNodeId !== nodeId) {
+      async (nodeId, isAdditiveSelection) => {
+  const now = Date.now();
+  if (lastNodeClickRef.current.id === nodeId && now - lastNodeClickRef.current.t < 400) return;
+  lastNodeClickRef.current = { id: nodeId, t: now };
+
+  if (editingNodeId && editingNodeId !== nodeId) {
         await handleEditorSave();
       }
 
-      setSelectedNodeIds((previous) => {
-        if (isAdditiveSelection) {
-          if (previous.includes(nodeId)) {
-            return previous.filter((id) => id !== nodeId);
-          }
-
-          return [...previous, nodeId];
+    setSelectedNodeIds((previous) => {
+      if (isAdditiveSelection) {
+        if (previous.includes(nodeId)) {
+          return previous.filter((id) => id !== nodeId);
         }
 
-        return previous.length === 1 && previous[0] === nodeId ? [] : [nodeId];
-      });
-    }, []);
+        return [...previous, nodeId];
+      }
+
+      return previous.length === 1 && previous[0] === nodeId ? [] : [nodeId];
+    });
+  }, []);
 
   const handleNodeDoubleClick = useCallback(
     (nodeId) => {
       const node = nodesMap[nodeId];
       if (!node) return;
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canEdit) return;
+      if (!computeNodePermissions(node, workspaceRole, currentUser?.id).canEdit)
+        return;
 
       setSelectedNodeIds([nodeId]);
       setEditingNodeId(nodeId);
       setEditingValue(getNodeTextValue(node));
     },
-    [getNodeTextValue, nodesMap, workspaceRole,currentUser?.id]
+    [getNodeTextValue, nodesMap, workspaceRole, currentUser?.id],
   );
-
 
   const transformEmitTimersRef = useRef({});
 
@@ -1210,7 +1619,10 @@ if (node.type !== "text") {
     (nodeId, target) => {
       const node = nodesMap[nodeId];
       if (!node) return;
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canResize) return;
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canResize
+      )
+        return;
 
       const data = node.data || {};
       const scaleX = target.scaleX();
@@ -1219,24 +1631,39 @@ if (node.type !== "text") {
       const min = MIN_DIMENSIONS[node.type] || { width: 40, height: 32 };
       const nextData = { ...data };
       if (node.type === "circle") {
-        const nextRadius = Math.max(min.width / 2, Math.round((data.radius || DEFAULT_NODE_DATA.circle.radius) * Math.max(scaleX, scaleY)));
+        const nextRadius = Math.max(
+          min.width / 2,
+          Math.round(
+            (data.radius || DEFAULT_NODE_DATA.circle.radius) *
+              Math.max(scaleX, scaleY),
+          ),
+        );
         nextData.radius = nextRadius;
       } else if (node.type === "diamond" || node.type === "triangle") {
-        const baseWidth = data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
-        const baseHeight = data.height || DEFAULT_NODE_DATA[node.type]?.height || 160;
-        const nextSize = Math.max(min.width, Math.max(baseWidth * scaleX, baseHeight * scaleY));
+        const baseWidth =
+          data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
+        const baseHeight =
+          data.height || DEFAULT_NODE_DATA[node.type]?.height || 160;
+        const nextSize = Math.max(
+          min.width,
+          Math.max(baseWidth * scaleX, baseHeight * scaleY),
+        );
         nextData.width = Math.round(nextSize);
         nextData.height = Math.round(nextSize);
       } else {
-        const baseWidth = data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
-        const baseHeight = data.height || DEFAULT_NODE_DATA[node.type]?.height || 100;
+        const baseWidth =
+          data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
+        const baseHeight =
+          data.height || DEFAULT_NODE_DATA[node.type]?.height || 100;
         let nextWidth = Math.max(min.width, Math.round(baseWidth * scaleX));
         let nextHeight = Math.max(min.height, Math.round(baseHeight * scaleY));
 
         if (node.type === "sticky" && min.maxAspect) {
           const ratio = nextWidth / nextHeight;
-          if (ratio > min.maxAspect) nextWidth = Math.round(nextHeight * min.maxAspect);
-          if (ratio < 1 / min.maxAspect) nextHeight = Math.round(nextWidth * min.maxAspect);
+          if (ratio > min.maxAspect)
+            nextWidth = Math.round(nextHeight * min.maxAspect);
+          if (ratio < 1 / min.maxAspect)
+            nextHeight = Math.round(nextWidth * min.maxAspect);
         }
 
         nextData.width = nextWidth;
@@ -1248,7 +1675,11 @@ if (node.type !== "text") {
       target.scaleX(1);
       target.scaleY(1);
 
-    scheduleNodeUpdate(nodeId, { x: target.x(), y: target.y(), dataPatch: nextData });
+      scheduleNodeUpdate(nodeId, {
+        x: target.x(),
+        y: target.y(),
+        dataPatch: nextData,
+      });
 
       // Throttle the broadcast so we don't flood the socket every frame
       if (transformEmitTimersRef.current[nodeId]) return;
@@ -1263,14 +1694,17 @@ if (node.type !== "text") {
         delete transformEmitTimersRef.current[nodeId];
       }, 50); // ~20fps cap
     },
-    [dispatch, emit, nodesMap, workspaceId, workspaceRole,currentUser?.id]
+    [dispatch, emit, nodesMap, workspaceId, workspaceRole, currentUser?.id],
   );
 
   const handleNodeTransformEnd = useCallback(
     async (nodeId, target) => {
       const node = nodesMap[nodeId];
       if (!node) return;
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canResize) return;
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canResize
+      )
+        return;
 
       const data = node.data || {};
       const scaleX = target.scaleX();
@@ -1282,32 +1716,47 @@ if (node.type !== "text") {
       const min = MIN_DIMENSIONS[node.type] || { width: 40, height: 32 };
       const nextData = { ...data };
       if (node.type === "circle") {
-        const nextRadius = Math.max(min.width / 2, Math.round((data.radius || DEFAULT_NODE_DATA.circle.radius) * Math.max(scaleX, scaleY)));
+        const nextRadius = Math.max(
+          min.width / 2,
+          Math.round(
+            (data.radius || DEFAULT_NODE_DATA.circle.radius) *
+              Math.max(scaleX, scaleY),
+          ),
+        );
         nextData.radius = nextRadius;
       } else if (node.type === "diamond" || node.type === "triangle") {
-        const baseWidth = data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
-        const baseHeight = data.height || DEFAULT_NODE_DATA[node.type]?.height || 160;
-        const nextSize = Math.max(min.width, Math.max(baseWidth * scaleX, baseHeight * scaleY));
+        const baseWidth =
+          data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
+        const baseHeight =
+          data.height || DEFAULT_NODE_DATA[node.type]?.height || 160;
+        const nextSize = Math.max(
+          min.width,
+          Math.max(baseWidth * scaleX, baseHeight * scaleY),
+        );
         nextData.width = Math.round(nextSize);
         nextData.height = Math.round(nextSize);
       } else {
-        const baseWidth = data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
-        const baseHeight = data.height || DEFAULT_NODE_DATA[node.type]?.height || 100;
+        const baseWidth =
+          data.width || DEFAULT_NODE_DATA[node.type]?.width || 160;
+        const baseHeight =
+          data.height || DEFAULT_NODE_DATA[node.type]?.height || 100;
         let nextWidth = Math.max(min.width, Math.round(baseWidth * scaleX));
         let nextHeight = Math.max(min.height, Math.round(baseHeight * scaleY));
 
         if (node.type === "sticky" && min.maxAspect) {
           const ratio = nextWidth / nextHeight;
-          if (ratio > min.maxAspect) nextWidth = Math.round(nextHeight * min.maxAspect);
-          if (ratio < 1 / min.maxAspect) nextHeight = Math.round(nextWidth * min.maxAspect);
+          if (ratio > min.maxAspect)
+            nextWidth = Math.round(nextHeight * min.maxAspect);
+          if (ratio < 1 / min.maxAspect)
+            nextHeight = Math.round(nextWidth * min.maxAspect);
         }
 
         nextData.width = nextWidth;
         nextData.height = nextHeight;
       }
 
-delete pendingNodeUpdatesRef.current[nodeId];
-dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
+      delete pendingNodeUpdatesRef.current[nodeId];
+      dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
 
       const result = await dispatch(
         updateCanvasNode({
@@ -1318,7 +1767,7 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
             y: Math.round(target.y()),
             data: nextData,
           },
-        })
+        }),
       );
 
       emit("canvas:resize", {
@@ -1333,22 +1782,34 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
         toast.error(result.payload || "Failed to update node");
       }
     },
-    [dispatch, emit, nodesMap, workspaceId, workspaceRole,currentUser?.id]
+    [dispatch, emit, nodesMap, workspaceId, workspaceRole, currentUser?.id],
   );
 
   const handleArrowEndpointDragMove = useCallback(
     (nodeId, endpoint, localX, localY) => {
       const node = nodesMap[nodeId];
       if (!node) return;
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canResize) return;
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canResize
+      )
+        return;
 
       const data = node.data || {};
       const currentDx = data.dx ?? 150;
       const currentDy = data.dy ?? 0;
 
       if (endpoint === "end") {
-        const { dx: snappedDx, dy: snappedDy } = snapArrowVector(localX, localY, isShiftPressed);
-        dispatch(updateNodeDataLocally({ nodeId, patch: { dx: snappedDx, dy: snappedDy } }));
+        const { dx: snappedDx, dy: snappedDy } = snapArrowVector(
+          localX,
+          localY,
+          isShiftPressed,
+        );
+        dispatch(
+          updateNodeDataLocally({
+            nodeId,
+            patch: { dx: snappedDx, dy: snappedDy },
+          }),
+        );
       } else {
         // start handle: group origin shift, absolute end-point fixed rakhna hai
         const nextX = node.x + localX;
@@ -1356,16 +1817,21 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
         const nextDx = currentDx - localX;
         const nextDy = currentDy - localY;
         dispatch(updateNodePositionLocally({ nodeId, x: nextX, y: nextY }));
-        dispatch(updateNodeDataLocally({ nodeId, patch: { dx: nextDx, dy: nextDy } }));
+        dispatch(
+          updateNodeDataLocally({ nodeId, patch: { dx: nextDx, dy: nextDy } }),
+        );
       }
     },
-    [dispatch, isShiftPressed, nodesMap, workspaceRole,currentUser?.id]
+    [dispatch, isShiftPressed, nodesMap, workspaceRole, currentUser?.id],
   );
 
   const handleArrowEndpointDragEnd = useCallback(
     async (nodeId, endpoint, localX, localY) => {
       const node = nodesMap[nodeId];
-      if (!computeNodePermissions(node, workspaceRole,currentUser?.id).canResize) return;
+      if (
+        !computeNodePermissions(node, workspaceRole, currentUser?.id).canResize
+      )
+        return;
 
       handleArrowEndpointDragMove(nodeId, endpoint, localX, localY);
 
@@ -1375,7 +1841,11 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
 
       let payload;
       if (endpoint === "end") {
-        const { dx: snappedDx, dy: snappedDy } = snapArrowVector(localX, localY, isShiftPressed);
+        const { dx: snappedDx, dy: snappedDy } = snapArrowVector(
+          localX,
+          localY,
+          isShiftPressed,
+        );
         payload = { data: { ...data, dx: snappedDx, dy: snappedDy } };
       } else {
         const currentDx = data.dx ?? 150;
@@ -1387,7 +1857,9 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
         };
       }
 
-      const result = await dispatch(updateCanvasNode({ workspaceId, nodeId, payload }));
+      const result = await dispatch(
+        updateCanvasNode({ workspaceId, nodeId, payload }),
+      );
       if (updateCanvasNode.rejected.match(result)) {
         toast.error(result.payload || "Failed to update arrow");
         return;
@@ -1395,10 +1867,19 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
 
       emit("canvas:resize", { workspaceId, nodeId, ...payload });
     },
-    [dispatch, emit, handleArrowEndpointDragMove, isShiftPressed, nodesMap, workspaceId, workspaceRole,currentUser?.id]
+    [
+      dispatch,
+      emit,
+      handleArrowEndpointDragMove,
+      isShiftPressed,
+      nodesMap,
+      workspaceId,
+      workspaceRole,
+      currentUser?.id,
+    ],
   );
 
- const latestNodesRef = useRef(nodesMap);
+  const latestNodesRef = useRef(nodesMap);
 
   useEffect(() => {
     latestNodesRef.current = nodesMap;
@@ -1421,7 +1902,7 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
         updateNodeDataLocally({
           nodeId,
           patch: { [field]: value },
-        })
+        }),
       );
 
       // Throttled live broadcast (leading + trailing) so no value gets dropped
@@ -1460,27 +1941,34 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
             payload: {
               data: latestNode.data,
             },
-          })
+          }),
         );
 
         if (updateCanvasNode.rejected.match(result)) {
           toast.error(result.payload || "Failed to update node");
         } else {
-          emit("node:data:commit", { workspaceId, nodeId, data: latestNode.data });
+          emit("node:data:commit", {
+            workspaceId,
+            nodeId,
+            data: latestNode.data,
+          });
         }
 
         delete colorTimersRef.current[timerKey];
       }, 800);
     },
-    [dispatch, selectedNode, selectedNodePermissions.canEdit, workspaceId, emit]
+    [
+      dispatch,
+      selectedNode,
+      selectedNodePermissions.canEdit,
+      workspaceId,
+      emit,
+    ],
   );
-
-
 
   // Guards against double-commit when blur + Enter + selection-change fire close together
   const savingTextRef = useRef(false);
 
-  
   // Commit whatever was being typed whenever selection moves away from the node being edited
   const prevEditingNodeIdRef = useRef(null);
 
@@ -1503,10 +1991,12 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
         setEditingNodeId(null);
       }
     },
-    [handleEditorSave]
+    [handleEditorSave],
   );
 
-  const inspectorColors = selectedNode ? COLOR_FIELDS[selectedNode.type] || [] : [];
+  const inspectorColors = selectedNode
+    ? COLOR_FIELDS[selectedNode.type] || []
+    : [];
   // const overlayStyle = selectedNodeBounds
   //   ? {
   //     left: `${selectedNodeBounds.x * viewport.scale + viewport.x}px`,
@@ -1520,7 +2010,11 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
     if (!selectedNodeIds.length) return;
     for (const nodeId of selectedNodeIds) {
       const node = nodesMap[nodeId];
-      const permissions = computeNodePermissions(node, workspaceRole,currentUser?.id);
+      const permissions = computeNodePermissions(
+        node,
+        workspaceRole,
+        currentUser?.id,
+      );
       if (!permissions.canDelete) {
         toast.error("You don't have permission to delete this node");
         return;
@@ -1533,131 +2027,207 @@ dispatch(updateNodeDataLocally({ nodeId, patch: nextData }));
     }
 
     setSelectedNodeIds([]);
-  }, [dispatch, nodesMap, selectedNodeIds, workspaceId, workspaceRole,currentUser?.id]);
+  }, [
+    dispatch,
+    nodesMap,
+    selectedNodeIds,
+    workspaceId,
+    workspaceRole,
+    currentUser?.id,
+  ]);
 
   const handleToggleSelectedNodeLock = useCallback(async () => {
     if (!selectedNode?.id || !isLead) return;
 
     const thunk = selectedNode.locked ? unlockCanvasNode : lockCanvasNode;
-    const result = await dispatch(thunk({ workspaceId, nodeId: selectedNode.id }));
+    const result = await dispatch(
+      thunk({ workspaceId, nodeId: selectedNode.id }),
+    );
     if (thunk.rejected.match(result)) {
       toast.error(result.payload || "Failed to update lock state");
     }
   }, [dispatch, isLead, selectedNode, workspaceId]);
 
-// Fetch members once when the dialog is opened
-useEffect(() => {
-  if (isPermissionsOpen && workspaceId) {
-    dispatch(fetchWorkspaceMembers(workspaceId));
-  }
-}, [isPermissionsOpen, workspaceId, dispatch]);
+  // Fetch members once when the dialog is opened
+  useEffect(() => {
+    if (isPermissionsOpen && workspaceId) {
+      dispatch(fetchWorkspaceMembers(workspaceId));
+    }
+  }, [isPermissionsOpen, workspaceId, dispatch]);
 
-// Seed the draft selection from the currently-selected node whenever the dialog opens
-useEffect(() => {
-  if (isPermissionsOpen && selectedNode) {
-    setDraftAllowedUserIds(selectedNode.allowedUserIds || []);
-  }
-}, [isPermissionsOpen, selectedNode]);
+  // Seed the draft selection from the currently-selected node whenever the dialog opens
+  useEffect(() => {
+    if (isPermissionsOpen && selectedNode) {
+      setDraftAllowedUserIds(selectedNode.allowedUserIds || []);
+    }
+  }, [isPermissionsOpen, selectedNode]);
 
-const toggleDraftPermission = useCallback((userId) => {
-  setDraftAllowedUserIds((prev) =>
-    prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+  const toggleDraftPermission = useCallback((userId) => {
+    setDraftAllowedUserIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
+    );
+  }, []);
+
+  const handleSavePermissions = useCallback(async () => {
+    if (!selectedNode?.id || !isLead) return;
+    setSavingPermissions(true);
+
+    const result = await dispatch(
+      updateCanvasNodePermissions({
+        workspaceId,
+        nodeId: selectedNode.id,
+        payload: { allowedUserIds: draftAllowedUserIds },
+      }),
+    );
+
+    setSavingPermissions(false);
+
+    if (updateCanvasNodePermissions.rejected.match(result)) {
+      toast.error(result.payload || "Failed to update permissions");
+      return;
+    }
+
+    toast.success("Permissions updated");
+    setIsPermissionsOpen(false);
+  }, [dispatch, draftAllowedUserIds, isLead, selectedNode, workspaceId]);
+
+  //  const handlePermissionsChange = useCallback(
+  //   async (userId, checked) => {
+  //     if (!selectedNode?.id || !isLead) return;
+
+  //     const currentUserIds = Array.isArray(selectedNode.allowedUserIds) ? selectedNode.allowedUserIds : [];
+  //     const nextUserIds = checked
+  //       ? Array.from(new Set([...currentUserIds, userId]))
+  //       : currentUserIds.filter((id) => id !== userId);
+
+  //     const result = await dispatch(
+  //       updateCanvasNodePermissions({
+  //         workspaceId,
+  //         nodeId: selectedNode.id,
+  //         payload: { allowedUserIds: nextUserIds },
+  //       })
+  //     );
+
+  //     if (updateCanvasNodePermissions.rejected.match(result)) {
+  //       toast.error(result.payload || "Failed to update permissions");
+  //     }
+  //   },
+  //   [dispatch, isLead, selectedNode, workspaceId]
+  // );
+  const handleNodeMouseEnter = useCallback((nodeId, canEdit) => {
+    setHoveredNodeId(nodeId);
+    const stage = stageRef.current;
+    if (stage && !draggingNodeRef.current) {
+      stage.container().style.cursor = canEdit ? "move" : "not-allowed";
+    }
+  }, []);
+
+  const handleNodeMouseLeave = useCallback(
+    (nodeId) => {
+      setHoveredNodeId((current) => (current === nodeId ? null : current));
+      const stage = stageRef.current;
+      if (stage && !draggingNodeRef.current) {
+        stage.container().style.cursor =
+          activeTool === "select" ? "grab" : "crosshair";
+      }
+    },
+    [activeTool],
   );
-}, []);
-
-const handleSavePermissions = useCallback(async () => {
-  if (!selectedNode?.id || !isLead) return;
-  setSavingPermissions(true);
-
-  const result = await dispatch(
-    updateCanvasNodePermissions({
-      workspaceId,
-      nodeId: selectedNode.id,
-      payload: { allowedUserIds: draftAllowedUserIds },
-    })
-  );
-
-  setSavingPermissions(false);
-
-  if (updateCanvasNodePermissions.rejected.match(result)) {
-    toast.error(result.payload || "Failed to update permissions");
-    return;
-  }
-
-  toast.success("Permissions updated");
-  setIsPermissionsOpen(false);
-}, [dispatch, draftAllowedUserIds, isLead, selectedNode, workspaceId]);
-
-//  const handlePermissionsChange = useCallback(
-//   async (userId, checked) => {
-//     if (!selectedNode?.id || !isLead) return;
-
-//     const currentUserIds = Array.isArray(selectedNode.allowedUserIds) ? selectedNode.allowedUserIds : [];
-//     const nextUserIds = checked
-//       ? Array.from(new Set([...currentUserIds, userId]))
-//       : currentUserIds.filter((id) => id !== userId);
-
-//     const result = await dispatch(
-//       updateCanvasNodePermissions({
-//         workspaceId,
-//         nodeId: selectedNode.id,
-//         payload: { allowedUserIds: nextUserIds },
-//       })
-//     );
-
-//     if (updateCanvasNodePermissions.rejected.match(result)) {
-//       toast.error(result.payload || "Failed to update permissions");
-//     }
-//   },
-//   [dispatch, isLead, selectedNode, workspaceId]
-// );
-const handleNodeMouseEnter = useCallback((nodeId, canEdit) => {
-  setHoveredNodeId(nodeId);
-  const stage = stageRef.current;
-  if (stage && !draggingNodeRef.current) {
-    stage.container().style.cursor = canEdit ? "move" : "not-allowed";
-  }
-}, []);
-
-const handleNodeMouseLeave = useCallback((nodeId) => {
-  setHoveredNodeId((current) => (current === nodeId ? null : current));
-  const stage = stageRef.current;
-  if (stage && !draggingNodeRef.current) {
-    stage.container().style.cursor = activeTool === "select" ? "grab" : "crosshair";
-  }
-}, [activeTool]);
   const renderNode = (node) => {
-    const permissions = computeNodePermissions(node, workspaceRole,currentUser?.id);
+    const permissions = computeNodePermissions(
+      node,
+      workspaceRole,
+      currentUser?.id,
+    );
     const commonProps = {
-  node,
-  isSelected: selectedNodeIds.includes(node.id),
-  permissions,
-  isEditing: node.id === editingNodeId,
-  onDragEnd: handleNodeDragEnd,
-  onClick: handleNodeClick,
-  onMouseEnter: () => handleNodeMouseEnter(node.id, permissions.canEdit),
-  onMouseLeave: () => handleNodeMouseLeave(node.id),
-};
+      node,
+      isSelected: selectedNodeIds.includes(node.id),
+      permissions,
+      isEditing: node.id === editingNodeId,
+      onDragEnd: handleNodeDragEnd,
+      onClick: handleNodeClick,
+      onMouseEnter: () => handleNodeMouseEnter(node.id, permissions.canEdit),
+      onMouseLeave: () => handleNodeMouseLeave(node.id),
+    };
     switch (node.type) {
-      case "sticky": return <StickyNode key={node.id} {...commonProps} onDragMove={handleNodeDragMove} onTransform={handleNodeTransform} onTransformEnd={handleNodeTransformEnd} onDoubleClick={handleNodeDoubleClick} />;
-      case "text": return <TextNode key={node.id} {...commonProps} onDragMove={handleNodeDragMove} onTransform={handleNodeTransform} onTransformEnd={handleNodeTransformEnd} onDoubleClick={handleNodeDoubleClick} />;
+      case "sticky":
+        return (
+          <StickyNode
+            key={node.id}
+            {...commonProps}
+            onDragMove={handleNodeDragMove}
+            onTransform={handleNodeTransform}
+            onTransformEnd={handleNodeTransformEnd}
+            onDoubleClick={handleNodeDoubleClick}
+          />
+        );
+      case "text":
+        return (
+          <TextNode
+            key={node.id}
+            {...commonProps}
+            onDragMove={handleNodeDragMove}
+            onTransform={handleNodeTransform}
+            onTransformEnd={handleNodeTransformEnd}
+            onDoubleClick={handleNodeDoubleClick}
+          />
+        );
       case "rectangle":
       case "circle":
       case "diamond":
-      case "triangle": return <ShapeNode key={node.id} {...commonProps} onDragMove={handleNodeDragMove} onTransform={handleNodeTransform} onTransformEnd={handleNodeTransformEnd} onDoubleClick={handleNodeDoubleClick} />;
-      case "arrow": return <ArrowNode key={node.id} {...commonProps} onDragMove={handleNodeDragMove} onTransform={handleNodeTransform} onTransformEnd={handleNodeTransformEnd} onDoubleClick={handleNodeDoubleClick} canEdit={canEditCanvas}
-        onEndpointDragMove={handleArrowEndpointDragMove}
-        onEndpointDragEnd={handleArrowEndpointDragEnd} />;
-      case "line": return <ArrowNode key={node.id} {...commonProps} onDragMove={handleNodeDragMove} onTransform={handleNodeTransform} onTransformEnd={handleNodeTransformEnd} onDoubleClick={handleNodeDoubleClick} canEdit={canEditCanvas}
-        onEndpointDragMove={handleArrowEndpointDragMove}
-        onEndpointDragEnd={handleArrowEndpointDragEnd} />;
-      default: return null;
+      case "triangle":
+        return (
+          <ShapeNode
+            key={node.id}
+            {...commonProps}
+            onDragMove={handleNodeDragMove}
+            onTransform={handleNodeTransform}
+            onTransformEnd={handleNodeTransformEnd}
+            onDoubleClick={handleNodeDoubleClick}
+          />
+        );
+      case "arrow":
+        return (
+          <ArrowNode
+            key={node.id}
+            {...commonProps}
+            onDragMove={handleNodeDragMove}
+            onTransform={handleNodeTransform}
+            onTransformEnd={handleNodeTransformEnd}
+            onDoubleClick={handleNodeDoubleClick}
+            canEdit={canEditCanvas}
+            onEndpointDragMove={handleArrowEndpointDragMove}
+            onEndpointDragEnd={handleArrowEndpointDragEnd}
+          />
+        );
+      case "line":
+        return (
+          <ArrowNode
+            key={node.id}
+            {...commonProps}
+            onDragMove={handleNodeDragMove}
+            onTransform={handleNodeTransform}
+            onTransformEnd={handleNodeTransformEnd}
+            onDoubleClick={handleNodeDoubleClick}
+            canEdit={canEditCanvas}
+            onEndpointDragMove={handleArrowEndpointDragMove}
+            onEndpointDragEnd={handleArrowEndpointDragEnd}
+          />
+        );
+      default:
+        return null;
     }
   };
- useEffect(() => () => {
-  if (localCursorRafRef.current) cancelAnimationFrame(localCursorRafRef.current);
-  if (updateRafRef.current) cancelAnimationFrame(updateRafRef.current);
-}, []);
+  useEffect(
+    () => () => {
+      if (localCursorRafRef.current)
+        cancelAnimationFrame(localCursorRafRef.current);
+      if (updateRafRef.current) cancelAnimationFrame(updateRafRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     const targetNodeId = searchParams.get("node");
@@ -1682,19 +2252,34 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
     nextParams.delete("node");
     setSearchParams(nextParams, { replace: true });
     return () => clearTimeout(timer);
-  }, [dimensions.height, dimensions.width, getNodeBounds, nodesMap, searchParams, setSearchParams]);
+  }, [
+    dimensions.height,
+    dimensions.width,
+    getNodeBounds,
+    nodesMap,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const hoveredNode = hoveredNodeId ? nodesMap[hoveredNodeId] : null;
-  const hoveredPermissions = hoveredNode ? computeNodePermissions(hoveredNode, workspaceRole,currentUser?.id) : null;
-  const hoveredBounds = hoveredNode ? getNodeBounds(hoveredNode) : null;
-  const hoveredTooltip = hoveredNode && hoveredBounds && (!hoveredPermissions?.canEdit || hoveredPermissions?.isLocked)
-    ? hoveredPermissions.isLocked
-      ? "Locked node"
-      : "You don't have permission to edit this node."
+  const hoveredPermissions = hoveredNode
+    ? computeNodePermissions(hoveredNode, workspaceRole, currentUser?.id)
     : null;
+  const hoveredBounds = hoveredNode ? getNodeBounds(hoveredNode) : null;
+  const hoveredTooltip =
+    hoveredNode &&
+    hoveredBounds &&
+    (!hoveredPermissions?.canEdit || hoveredPermissions?.isLocked)
+      ? hoveredPermissions.isLocked
+        ? "Locked node"
+        : "You don't have permission to edit this node."
+      : null;
 
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-[color:var(--canvas-background)]">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full overflow-hidden bg-[color:var(--canvas-background)]"
+    >
       {/* Loading Overlay */}
       {loading && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-[color:var(--bg-primary)]/80 backdrop-blur-sm">
@@ -1707,7 +2292,7 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
 
       {/* Delete button for selected node */}
       {selectedNodeIds.length > 0 && canEditCanvas && (
-        <div className="absolute top-4 right-4 z-20">
+        <div className="absolute top-[72px] right-2 md:top-4 md:right-4 z-20">
           <button
             onClick={handleDeleteSelected}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[color:var(--bg-surface)] border border-[color:var(--border)] text-[color:var(--danger)] text-sm font-medium shadow-md hover:bg-[color:var(--danger)]/10 transition-colors"
@@ -1720,13 +2305,12 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
 
       {/* Cursor hint when tool is active */}
       {activeTool !== "select" && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+        <div className="absolute top-[72px] md:top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
           <span className="bg-[color:var(--accent)] text-white text-xs font-medium px-3 py-1.5 rounded-full shadow-md">
-            Click to place {activeTool}
+            Drag to draw · tap to place {activeTool}
           </span>
         </div>
       )}
-      
 
       <ToolStylePanel
         tool={activeTool}
@@ -1744,7 +2328,6 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
 
       {/* Konva Stage */}
       <Stage
-
         ref={stageRef}
         width={dimensions.width}
         height={dimensions.height}
@@ -1754,11 +2337,23 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
         scaleY={viewport.scale}
         draggable={activeTool === "select"}
         onWheel={handleWheel}
-        onMouseDown={handleStagePointerDown}
-        onMouseMove={handleStagePointerMove}
-        onMouseUp={handleStagePointerUp}
+        onMouseDown={(e) => {
+          if (isEmulatedMouse()) return;
+          handleStagePointerDown(e);
+        }}
+        onMouseMove={() => {
+          if (isEmulatedMouse()) return;
+          handleStagePointerMove();
+        }}
+        onMouseUp={() => {
+          if (isEmulatedMouse()) return;
+          handleStagePointerUp();
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onClick={handleStageClick}
-     onDragMove={(e) => {
+        onDragMove={(e) => {
           if (e.target !== e.target.getStage()) {
             return;
           }
@@ -1770,9 +2365,7 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
           }
           setViewport((v) => ({ ...v, x: e.target.x(), y: e.target.y() }));
         }}
-
-
-        style={{ cursor: activeTool === "select" ? "grab" : "crosshair" }}
+        style={{ cursor: activeTool === "select" ? "grab" : "crosshair", touchAction: "none" }}
       >
         {/* Grid layer */}
         <Layer listening={false}>
@@ -1787,66 +2380,136 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
           ))}
         </Layer>
 
-       {/* Nodes layer */}
+        {/* Nodes layer */}
         <Layer>
-  {sortedNodes.map(renderNode)}
+          {sortedNodes.map(renderNode)}
 
-         {creationDraft && activeTool !== "arrow" && (() => {
-            const { tool, start } = creationDraft;
-            const draftData = buildPresetData(tool, { width: 24, height: 24 });
-            const draftFill = draftData.fill || draftData.color || "#E5E7EB";
-            const draftStroke = draftData.stroke || draftData.color || "#A1A1AA";
+          {creationDraft &&
+            activeTool !== "arrow" &&
+            (() => {
+              const { tool, start } = creationDraft;
+              const draftData = buildPresetData(tool, {
+                width: 24,
+                height: 24,
+              });
+              const draftFill = draftData.fill || draftData.color || "#E5E7EB";
+              const draftStroke =
+                draftData.stroke || draftData.color || "#A1A1AA";
 
-            return (
-              <>
-                {tool === "sticky" && (
-                  <Rect ref={draftRectRef} x={start.x} y={start.y} width={24} height={24} fill={draftFill} stroke={draftStroke} strokeWidth={1.5 / viewport.scale} dash={[6, 4]} cornerRadius={10} opacity={0.7} listening={false} />
-                )}
-                {tool === "rectangle" && (
-                  <Rect ref={draftRectRef} x={start.x} y={start.y} width={24} height={24} fill={draftFill} stroke={draftStroke} strokeWidth={1.5 / viewport.scale} dash={[6, 4]} cornerRadius={8} opacity={0.7} listening={false} />
-                )}
-                {(tool === "diamond" || tool === "triangle") && (
-                  <Line
-                    ref={draftPolygonRef}
-                    x={start.x}
-                    y={start.y}
-                    points={tool === "diamond" ? [12, 0, 24, 12, 12, 24, 0, 12] : [12, 0, 24, 24, 0, 24]}
-                    closed
-                    fill={draftFill}
-                    stroke={draftStroke}
-                    strokeWidth={1.5 / viewport.scale}
-                    dash={[6, 4]}
-                    opacity={0.7}
-                    listening={false}
-                  />
-                )}
-                {tool === "text" && (
-                  <>
-                    <Rect ref={draftTextRectRef} x={start.x} y={start.y} width={180} height={48} fill="transparent" stroke={draftStroke} strokeWidth={1.5 / viewport.scale} dash={[6, 4]} cornerRadius={8} opacity={0.7} listening={false} />
-                    <Text ref={draftTextLabelRef} x={start.x + 12} y={start.y + 10} width={156} height={28} text="Text block" fontSize={16} fill={draftStroke} opacity={0.7} listening={false} />
-                  </>
-                )}
-                {tool === "circle" && (
-                  <Circle ref={draftCircleRef} x={start.x} y={start.y} radius={12} fill={draftFill} stroke={draftStroke} strokeWidth={1.5 / viewport.scale} opacity={0.7} listening={false} />
-                )}
-                {tool === "line" && (
-                  <Line
-                    ref={draftLineRef}
-                    x={start.x}
-                    y={start.y}
-                    points={[0, 0, 0, 0]}
-                    stroke={draftStroke}
-                    strokeWidth={1.5 / viewport.scale}
-                    dash={[6, 4]}
-                    lineCap="round"
-                    lineJoin="round"
-                    opacity={0.7}
-                    listening={false}
-                  />
-                )}
-              </>
-            );
-          })()}
+              return (
+                <>
+                  {tool === "sticky" && (
+                    <Rect
+                      ref={draftRectRef}
+                      x={start.x}
+                      y={start.y}
+                      width={24}
+                      height={24}
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      cornerRadius={10}
+                      opacity={0.7}
+                      listening={false}
+                    />
+                  )}
+                  {tool === "rectangle" && (
+                    <Rect
+                      ref={draftRectRef}
+                      x={start.x}
+                      y={start.y}
+                      width={24}
+                      height={24}
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      cornerRadius={8}
+                      opacity={0.7}
+                      listening={false}
+                    />
+                  )}
+                  {(tool === "diamond" || tool === "triangle") && (
+                    <Line
+                      ref={draftPolygonRef}
+                      x={start.x}
+                      y={start.y}
+                      points={
+                        tool === "diamond"
+                          ? [12, 0, 24, 12, 12, 24, 0, 12]
+                          : [12, 0, 24, 24, 0, 24]
+                      }
+                      closed
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      opacity={0.7}
+                      listening={false}
+                    />
+                  )}
+                  {tool === "text" && (
+                    <>
+                      <Rect
+                        ref={draftTextRectRef}
+                        x={start.x}
+                        y={start.y}
+                        width={180}
+                        height={48}
+                        fill="transparent"
+                        stroke={draftStroke}
+                        strokeWidth={1.5 / viewport.scale}
+                        dash={[6, 4]}
+                        cornerRadius={8}
+                        opacity={0.7}
+                        listening={false}
+                      />
+                      <Text
+                        ref={draftTextLabelRef}
+                        x={start.x + 12}
+                        y={start.y + 10}
+                        width={156}
+                        height={28}
+                        text="Text block"
+                        fontSize={16}
+                        fill={draftStroke}
+                        opacity={0.7}
+                        listening={false}
+                      />
+                    </>
+                  )}
+                  {tool === "circle" && (
+                    <Circle
+                      ref={draftCircleRef}
+                      x={start.x}
+                      y={start.y}
+                      radius={12}
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      opacity={0.7}
+                      listening={false}
+                    />
+                  )}
+                  {tool === "line" && (
+                    <Line
+                      ref={draftLineRef}
+                      x={start.x}
+                      y={start.y}
+                      points={[0, 0, 0, 0]}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      lineCap="round"
+                      lineJoin="round"
+                      opacity={0.7}
+                      listening={false}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
           {arrowDraft && activeTool === "arrow" && (
             <Arrow
@@ -1867,7 +2530,12 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
             <Arrow
               x={remoteDraft.start.x}
               y={remoteDraft.start.y}
-              points={[0, 0, remoteDraft.end.x - remoteDraft.start.x, remoteDraft.end.y - remoteDraft.start.y]}
+              points={[
+                0,
+                0,
+                remoteDraft.end.x - remoteDraft.start.x,
+                remoteDraft.end.y - remoteDraft.start.y,
+              ]}
               stroke="#F97316"
               fill="#F97316"
               strokeWidth={2 / viewport.scale}
@@ -1879,87 +2547,165 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
             />
           )}
 
-          {remoteDraft && remoteDraft.tool && (() => {
-            const current = remoteDraft.current || remoteDraft.start;
-            const left = Math.min(remoteDraft.start.x, current.x);
-            const top = Math.min(remoteDraft.start.y, current.y);
-            const width = Math.max(24, Math.abs(current.x - remoteDraft.start.x));
-            const height = Math.max(24, Math.abs(current.y - remoteDraft.start.y));
-            const draftData = buildPresetData(remoteDraft.tool, { width, height });
-            const draftFill = draftData.fill || draftData.color || "#FED7AA";
-            const draftStroke = "#F97316";
-            const lineDx = current.x - remoteDraft.start.x;
-            const lineDy = current.y - remoteDraft.start.y;
+          {remoteDraft &&
+            remoteDraft.tool &&
+            (() => {
+              const current = remoteDraft.current || remoteDraft.start;
+              const left = Math.min(remoteDraft.start.x, current.x);
+              const top = Math.min(remoteDraft.start.y, current.y);
+              const width = Math.max(
+                24,
+                Math.abs(current.x - remoteDraft.start.x),
+              );
+              const height = Math.max(
+                24,
+                Math.abs(current.y - remoteDraft.start.y),
+              );
+              const draftData = buildPresetData(remoteDraft.tool, {
+                width,
+                height,
+              });
+              const draftFill = draftData.fill || draftData.color || "#FED7AA";
+              const draftStroke = "#F97316";
+              const lineDx = current.x - remoteDraft.start.x;
+              const lineDy = current.y - remoteDraft.start.y;
 
-            return (
-              <>
-                {remoteDraft.tool === "sticky" && (
-                  <Rect x={left} y={top} width={width} height={height} fill={draftFill} stroke={draftStroke} strokeWidth={1.5 / viewport.scale} dash={[6, 4]} cornerRadius={10} opacity={0.6} listening={false} />
-                )}
-                {remoteDraft.tool === "rectangle" && (
-                  <Rect x={left} y={top} width={width} height={height} fill={draftFill} stroke={draftStroke} strokeWidth={1.5 / viewport.scale} dash={[6, 4]} cornerRadius={8} opacity={0.6} listening={false} />
-                )}
-                {(remoteDraft.tool === "diamond" || remoteDraft.tool === "triangle") && (
-                  <Line
-                    x={left}
-                    y={top}
-                    points={remoteDraft.tool === "diamond"
-                      ? [width / 2, 0, width, height / 2, width / 2, height, 0, height / 2]
-                      : [width / 2, 0, width, height, 0, height]}
-                    closed
-                    fill={draftFill}
-                    stroke={draftStroke}
-                    strokeWidth={1.5 / viewport.scale}
-                    dash={[6, 4]}
-                    opacity={0.6}
-                    listening={false}
-                  />
-                )}
-                {remoteDraft.tool === "text" && (
-                  <Rect x={left} y={top} width={Math.max(width, 180)} height={Math.max(height, 48)} fill="transparent" stroke={draftStroke} strokeWidth={1.5 / viewport.scale} dash={[6, 4]} cornerRadius={8} opacity={0.6} listening={false} />
-                )}
-                {remoteDraft.tool === "circle" && (
-                  <Circle x={left + width / 2} y={top + height / 2} radius={Math.max(width, height) / 2} fill={draftFill} stroke={draftStroke} strokeWidth={1.5 / viewport.scale} opacity={0.6} listening={false} />
-                )}
-                {remoteDraft.tool === "line" && (
-                  <Line
-                    x={remoteDraft.start.x}
-                    y={remoteDraft.start.y}
-                    points={[0, 0, lineDx, lineDy]}
-                    stroke={draftStroke}
-                    strokeWidth={1.5 / viewport.scale}
-                    dash={[6, 4]}
-                    lineCap="round"
-                    lineJoin="round"
-                    opacity={0.6}
-                    listening={false}
-                  />
-                )}
-              </>
-            );
-          })()}
+              return (
+                <>
+                  {remoteDraft.tool === "sticky" && (
+                    <Rect
+                      x={left}
+                      y={top}
+                      width={width}
+                      height={height}
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      cornerRadius={10}
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )}
+                  {remoteDraft.tool === "rectangle" && (
+                    <Rect
+                      x={left}
+                      y={top}
+                      width={width}
+                      height={height}
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      cornerRadius={8}
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )}
+                  {(remoteDraft.tool === "diamond" ||
+                    remoteDraft.tool === "triangle") && (
+                    <Line
+                      x={left}
+                      y={top}
+                      points={
+                        remoteDraft.tool === "diamond"
+                          ? [
+                              width / 2,
+                              0,
+                              width,
+                              height / 2,
+                              width / 2,
+                              height,
+                              0,
+                              height / 2,
+                            ]
+                          : [width / 2, 0, width, height, 0, height]
+                      }
+                      closed
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )}
+                  {remoteDraft.tool === "text" && (
+                    <Rect
+                      x={left}
+                      y={top}
+                      width={Math.max(width, 180)}
+                      height={Math.max(height, 48)}
+                      fill="transparent"
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      cornerRadius={8}
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )}
+                  {remoteDraft.tool === "circle" && (
+                    <Circle
+                      x={left + width / 2}
+                      y={top + height / 2}
+                      radius={Math.max(width, height) / 2}
+                      fill={draftFill}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )}
+                  {remoteDraft.tool === "line" && (
+                    <Line
+                      x={remoteDraft.start.x}
+                      y={remoteDraft.start.y}
+                      points={[0, 0, lineDx, lineDy]}
+                      stroke={draftStroke}
+                      strokeWidth={1.5 / viewport.scale}
+                      dash={[6, 4]}
+                      lineCap="round"
+                      lineJoin="round"
+                      opacity={0.6}
+                      listening={false}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
-
-         <Transformer
+          <Transformer
             ref={transformerRef}
             rotateEnabled={false}
-            keepRatio={selectedNode?.type === "circle" || selectedNode?.type === "diamond" || selectedNode?.type === "triangle" || isShiftPressed}
+            keepRatio={
+              selectedNode?.type === "circle" ||
+              selectedNode?.type === "diamond" ||
+              selectedNode?.type === "triangle" ||
+              isShiftPressed
+            }
             enabledAnchors={
-              selectedNode?.type === "circle" || selectedNode?.type === "diamond" || selectedNode?.type === "triangle" || isShiftPressed
+              selectedNode?.type === "circle" ||
+              selectedNode?.type === "diamond" ||
+              selectedNode?.type === "triangle" ||
+              isShiftPressed
                 ? ["top-left", "top-right", "bottom-left", "bottom-right"]
                 : [
-                  "top-left",
-                  "top-center",
-                  "top-right",
-                  "middle-right",
-                  "bottom-right",
-                  "bottom-center",
-                  "bottom-left",
-                  "middle-left",
-                ]
+                    "top-left",
+                    "top-center",
+                    "top-right",
+                    "middle-right",
+                    "bottom-right",
+                    "bottom-center",
+                    "bottom-left",
+                    "middle-left",
+                  ]
             }
             boundBoxFunc={(oldBox, newBox) => {
-              const min = MIN_DIMENSIONS[selectedNode?.type] || { width: 40, height: 32 };
+              const min = MIN_DIMENSIONS[selectedNode?.type] || {
+                width: 40,
+                height: 32,
+              };
               if (newBox.width < min.width || newBox.height < min.height) {
                 return oldBox;
               }
@@ -2019,7 +2765,9 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
         removeZone={removeZone}
       />
 
-      {focusedNodeId && selectedNodeBounds && selectedNode?.id === focusedNodeId ? (
+      {focusedNodeId &&
+      selectedNodeBounds &&
+      selectedNode?.id === focusedNodeId ? (
         <div
           className="pointer-events-none absolute z-20 rounded-3xl border-2 border-[color:var(--accent)] shadow-[0_0_0_8px_rgba(99,102,241,0.12)] animate-pulse"
           style={{
@@ -2032,14 +2780,19 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
       ) : null}
 
       {selectedNode && selectedNodeBounds && !editingNodeId && (
-        <div
-          className="absolute z-20 w-72 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3 shadow-2xl"
-          style={{ right: 16, top: 80 }}
-        >
+       <div
+  className="absolute z-20 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3 shadow-2xl
+    left-2 right-2 bottom-20 max-h-[45vh] overflow-y-auto
+    md:left-auto md:right-4 md:top-20 md:bottom-auto md:w-72"
+>
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-[color:var(--text-primary)]">Node inspector</p>
-              <p className="text-xs text-[color:var(--text-secondary)] capitalize">{selectedNode.type}</p>
+              <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+                Node inspector
+              </p>
+              <p className="text-xs text-[color:var(--text-secondary)] capitalize">
+                {selectedNode.type}
+              </p>
             </div>
             <button
               onClick={() => setSelectedNodeIds([])}
@@ -2050,16 +2803,36 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
           </div>
 
           <div className="mb-3 text-xs text-[color:var(--text-secondary)]">
-            Double-click the node to edit its text. Resize with the corner handles.
+            Double-click the node to edit its text. Resize with the corner
+            handles.
           </div>
+          {selectedNodePermissions.canEdit && !["arrow", "line"].includes(selectedNode.type) && (
+  <button
+    type="button"
+    onClick={() => handleNodeDoubleClick(selectedNode.id)}
+    className="mb-3 w-full rounded-lg bg-[color:var(--primary)] px-3 py-2 text-xs font-semibold text-[color:var(--primary-foreground)]"
+  >
+    Edit text
+  </button>
+)}
 
-         {inspectorColors.length > 0 && (
+          {inspectorColors.length > 0 && (
             <div className="space-y-4">
               {inspectorColors.includes("fill") && (
                 <ColorSwatchPicker
                   label="Background"
-                  value={selectedNode.data?.fill && selectedNode.data.fill !== "rgba(0,0,0,0)" ? selectedNode.data.fill : "transparent"}
-                  onChange={(color) => handleInspectorChange("fill", color === "transparent" ? "rgba(0,0,0,0)" : color)}
+                  value={
+                    selectedNode.data?.fill &&
+                    selectedNode.data.fill !== "rgba(0,0,0,0)"
+                      ? selectedNode.data.fill
+                      : "transparent"
+                  }
+                  onChange={(color) =>
+                    handleInspectorChange(
+                      "fill",
+                      color === "transparent" ? "rgba(0,0,0,0)" : color,
+                    )
+                  }
                   colors={BACKGROUND_COLORS}
                   allowTransparent
                 />
@@ -2074,23 +2847,27 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
                 />
               )}
 
-              {inspectorColors.includes("color") && selectedNode.type === "text" && (
-                <ColorSwatchPicker
-                  label="Text color"
-                  value={selectedNode.data?.color || "#18181B"}
-                  onChange={(color) => handleInspectorChange("color", color)}
-                  colors={STROKE_COLORS}
-                />
-              )}
+              {inspectorColors.includes("color") &&
+                selectedNode.type === "text" && (
+                  <ColorSwatchPicker
+                    label="Text color"
+                    value={selectedNode.data?.color || "#18181B"}
+                    onChange={(color) => handleInspectorChange("color", color)}
+                    colors={STROKE_COLORS}
+                  />
+                )}
 
-              {inspectorColors.includes("textColor") && selectedNode.type === "sticky" && (
-                <ColorSwatchPicker
-                  label="Text color"
-                  value={selectedNode.data?.textColor || "#18181B"}
-                  onChange={(color) => handleInspectorChange("textColor", color)}
-                  colors={STROKE_COLORS}
-                />
-              )}
+              {inspectorColors.includes("textColor") &&
+                selectedNode.type === "sticky" && (
+                  <ColorSwatchPicker
+                    label="Text color"
+                    value={selectedNode.data?.textColor || "#18181B"}
+                    onChange={(color) =>
+                      handleInspectorChange("textColor", color)
+                    }
+                    colors={STROKE_COLORS}
+                  />
+                )}
 
               {selectedNode.type === "arrow" && (
                 <ColorSwatchPicker
@@ -2101,7 +2878,8 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
                 />
               )}
             </div>
-          )}</div>
+          )}
+        </div>
       )}
 
       {hoveredTooltip && hoveredBounds && (
@@ -2116,76 +2894,114 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
         </div>
       )}
 
-   {editingNodeId && selectedNodeBounds && (() => {
-        const editingNode = nodesMap[editingNodeId];
-        const isCircleEdit = editingNode?.type === "circle";
-        const isPolygonEdit = editingNode?.type === "diamond" || editingNode?.type === "triangle";
-        const boxWidth = Math.max(selectedNodeBounds.width * viewport.scale, editingNode?.type === "line" ? 160 : 0);
-        const boxHeight = Math.max(selectedNodeBounds.height * viewport.scale, editingNode?.type === "line" ? 72 : 0);
-        const circleInset = isCircleEdit ? Math.max(14, Math.round(Math.min(boxWidth, boxHeight) * 0.12)) : 0;
-        const editingPadding = editingNode?.type === "sticky" || editingNode?.type === "rectangle"
-          ? 12
-          : isCircleEdit || isPolygonEdit
-            ? 16
-            : 12;
+      {editingNodeId &&
+        selectedNodeBounds &&
+        (() => {
+          const editingNode = nodesMap[editingNodeId];
+          const isCircleEdit = editingNode?.type === "circle";
+          const isPolygonEdit =
+            editingNode?.type === "diamond" || editingNode?.type === "triangle";
+          const boxWidth = Math.max(
+            selectedNodeBounds.width * viewport.scale,
+            editingNode?.type === "line" ? 160 : 0,
+          );
+          const boxHeight = Math.max(
+            selectedNodeBounds.height * viewport.scale,
+            editingNode?.type === "line" ? 72 : 0,
+          );
+          const circleInset = isCircleEdit
+            ? Math.max(14, Math.round(Math.min(boxWidth, boxHeight) * 0.12))
+            : 0;
+          const editingPadding =
+            editingNode?.type === "sticky" || editingNode?.type === "rectangle"
+              ? 12
+              : isCircleEdit || isPolygonEdit
+                ? 16
+                : 12;
 
-        return (
-          <textarea
-            autoFocus
-            value={editingValue}
-            onChange={(event) => {
-              const value = event.target.value;
-              setEditingValue(value);
+          return (
+            <textarea
+              autoFocus
+              value={editingValue}
+              onChange={(event) => {
+                const value = event.target.value;
+                setEditingValue(value);
 
-              if (!textEmitTimerRef.current) {
-                emit("canvas:text", { workspaceId, nodeId: editingNodeId, value });
-                textEmitTimerRef.current = setTimeout(() => {
-                  textEmitTimerRef.current = null;
-                  if (pendingTextValueRef.current !== null) {
-                    const pending = pendingTextValueRef.current;
-                    pendingTextValueRef.current = null;
-                    emit("canvas:text", { workspaceId, nodeId: editingNodeId, value: pending });
-                  }
-                }, 120);
-              } else {
-                pendingTextValueRef.current = value;
-              }
-            }}
-            onBlur={handleEditorSave}
-            onKeyDown={handleEditorKeyDown}
-            className="absolute z-30 block resize-none bg-transparent outline-none border-0 m-0 p-0 shadow-2xl"
-            style={{
-              left: `${selectedNodeBounds.x * viewport.scale + viewport.x}px`,
-              top: `${selectedNodeBounds.y * viewport.scale + viewport.y}px`,
-              width: `${boxWidth}px`,
-              height: `${Math.max(boxHeight, 64)}px`,
-              color: editingNode?.type === "sticky" ? editingNode?.data?.textColor || "#18181B" : "#000000",
-              fontFamily: "Inter, system-ui, sans-serif",
-              fontSize: editingNode?.type === "text" ? `${editingNode?.data?.fontSize || 16}px` : "13px",
-              lineHeight: 1.4,
-              textAlign: editingNode?.type === "sticky" || editingNode?.type === "rectangle" ? "left" : "center",
-              overflow: "hidden",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              boxSizing: "border-box",
-              padding: editingPadding,
-              borderRadius: isCircleEdit ? "50%" : isPolygonEdit ? 0 : "0.75rem",
-              clipPath: editingNode?.type === "diamond"
-                ? "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"
-                : editingNode?.type === "triangle"
-                  ? "polygon(50% 0%, 100% 100%, 0% 100%)"
-                  : undefined,
-              background: "transparent",
-              caretColor: editingNode?.type === "sticky" ? editingNode?.data?.textColor || "#18181B" : "#000000",
-              opacity: editingNode?.locked ? 0.82 : 1,
-            }}
-            placeholder="Enter text"
-          />
-        );
-      })()}
+                if (!textEmitTimerRef.current) {
+                  emit("canvas:text", {
+                    workspaceId,
+                    nodeId: editingNodeId,
+                    value,
+                  });
+                  textEmitTimerRef.current = setTimeout(() => {
+                    textEmitTimerRef.current = null;
+                    if (pendingTextValueRef.current !== null) {
+                      const pending = pendingTextValueRef.current;
+                      pendingTextValueRef.current = null;
+                      emit("canvas:text", {
+                        workspaceId,
+                        nodeId: editingNodeId,
+                        value: pending,
+                      });
+                    }
+                  }, 120);
+                } else {
+                  pendingTextValueRef.current = value;
+                }
+              }}
+              onBlur={handleEditorSave}
+              onKeyDown={handleEditorKeyDown}
+              className="absolute z-30 block resize-none bg-transparent outline-none border-0 m-0 p-0 shadow-2xl"
+              style={{
+                left: `${selectedNodeBounds.x * viewport.scale + viewport.x}px`,
+                top: `${selectedNodeBounds.y * viewport.scale + viewport.y}px`,
+                width: `${boxWidth}px`,
+                height: `${Math.max(boxHeight, 64)}px`,
+                color:
+                  editingNode?.type === "sticky"
+                    ? editingNode?.data?.textColor || "#18181B"
+                    : "#000000",
+                fontFamily: "Inter, system-ui, sans-serif",
+                fontSize:
+                  editingNode?.type === "text"
+                    ? `${editingNode?.data?.fontSize || 16}px`
+                    : "13px",
+                lineHeight: 1.4,
+                textAlign:
+                  editingNode?.type === "sticky" ||
+                  editingNode?.type === "rectangle"
+                    ? "left"
+                    : "center",
+                overflow: "hidden",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                boxSizing: "border-box",
+                padding: editingPadding,
+                borderRadius: isCircleEdit
+                  ? "50%"
+                  : isPolygonEdit
+                    ? 0
+                    : "0.75rem",
+                clipPath:
+                  editingNode?.type === "diamond"
+                    ? "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"
+                    : editingNode?.type === "triangle"
+                      ? "polygon(50% 0%, 100% 100%, 0% 100%)"
+                      : undefined,
+                background: "transparent",
+                caretColor:
+                  editingNode?.type === "sticky"
+                    ? editingNode?.data?.textColor || "#18181B"
+                    : "#000000",
+                opacity: editingNode?.locked ? 0.82 : 1,
+              }}
+              placeholder="Enter text"
+            />
+          );
+        })()}
 
       {/* Toolbar */}
-     <CanvasToolbar
+      <CanvasToolbar
         activeTool={activeTool}
         onToolChange={setActiveTool}
         activeColor={toolFillColor}
@@ -2197,78 +3013,98 @@ const handleNodeMouseLeave = useCallback((nodeId) => {
         onOpenPermissions={() => setIsPermissionsOpen(true)}
       />
 
-   <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
-  <DialogContent className="max-w-md">
-    <DialogHeader>
-      <DialogTitle>Node permissions</DialogTitle>
-      <DialogDescription>
-        Choose which workspace members can edit this node. Leave everyone unchecked to allow all contributors.
-      </DialogDescription>
-    </DialogHeader>
+      <Dialog open={isPermissionsOpen} onOpenChange={setIsPermissionsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Node permissions</DialogTitle>
+            <DialogDescription>
+              Choose which workspace members can edit this node. Leave everyone
+              unchecked to allow all contributors.
+            </DialogDescription>
+          </DialogHeader>
 
-    <div className="max-h-72 space-y-1 overflow-y-auto py-2">
-      {members
-        .filter((member) => member.isOwner || member.role === "Lead")
-        .map((leadMember) => (
-          <div
-            key={leadMember.userId}
-            className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-[color:var(--text-secondary)]"
-          >
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-[color:var(--text-primary)]">{leadMember.name}</span>
-              <span className="text-xs">(Lead)</span>
-            </div>
-            <span className="text-xs italic">Always has access</span>
+          <div className="max-h-72 space-y-1 overflow-y-auto py-2">
+            {members
+              .filter((member) => member.isOwner || member.role === "Lead")
+              .map((leadMember) => (
+                <div
+                  key={leadMember.userId}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-[color:var(--text-secondary)]"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-[color:var(--text-primary)]">
+                      {leadMember.name}
+                    </span>
+                    <span className="text-xs">(Lead)</span>
+                  </div>
+                  <span className="text-xs italic">Always has access</span>
+                </div>
+              ))}
+
+            {members.filter((member) => member.role === "Contributor")
+              .length === 0 && (
+              <p className="px-3 py-4 text-center text-sm text-[color:var(--text-secondary)]">
+                No contributors in this workspace yet.
+              </p>
+            )}
+
+            {members
+              .filter((member) => member.role === "Contributor")
+              .map((member) => {
+                const isSelected = draftAllowedUserIds.includes(member.userId);
+                return (
+                  <button
+                    key={member.userId}
+                    type="button"
+                    onClick={() => toggleDraftPermission(member.userId)}
+                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[color:var(--bg-primary)] transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-[color:var(--text-primary)]">
+                        {member.name}
+                      </span>
+                      <span className="text-xs text-[color:var(--text-secondary)]">
+                        {member.email}
+                      </span>
+                    </div>
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+                        isSelected
+                          ? "bg-[color:var(--accent)] border-[color:var(--accent)]"
+                          : "border-[color:var(--border)]"
+                      }`}
+                    >
+                      {isSelected && (
+                        <Check
+                          className="h-3.5 w-3.5 text-white"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
           </div>
-        ))}
 
-      {members.filter((member) => member.role === "Contributor").length === 0 && (
-        <p className="px-3 py-4 text-center text-sm text-[color:var(--text-secondary)]">
-          No contributors in this workspace yet.
-        </p>
-      )}
-
-      {members
-        .filter((member) => member.role === "Contributor")
-        .map((member) => {
-          const isSelected = draftAllowedUserIds.includes(member.userId);
-          return (
-            <button
-              key={member.userId}
-              type="button"
-              onClick={() => toggleDraftPermission(member.userId)}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-[color:var(--bg-primary)] transition-colors"
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPermissionsOpen(false)}
+              disabled={savingPermissions}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-[color:var(--text-primary)]">{member.name}</span>
-                <span className="text-xs text-[color:var(--text-secondary)]">{member.email}</span>
-              </div>
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
-                  isSelected
-                    ? "bg-[color:var(--accent)] border-[color:var(--accent)]"
-                    : "border-[color:var(--border)]"
-                }`}
-              >
-                {isSelected && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
-              </span>
-            </button>
-          );
-        })}
-    </div>
-
-   <DialogFooter>
-  <Button variant="outline" onClick={() => setIsPermissionsOpen(false)} disabled={savingPermissions}>
-    Cancel
-  </Button>
-  <Button onClick={handleSavePermissions} disabled={savingPermissions}>
-    {savingPermissions ? "Saving..." : "Save"}
-  </Button>
-</DialogFooter>
-  </DialogContent>
-</Dialog>
-  {/* Zoom indicator */}
-      <div className="absolute bottom-6 right-16 z-10 text-xs text-[color:var(--foreground-muted)] bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-2.5 py-1.5 shadow-sm font-mono select-none">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSavePermissions}
+              disabled={savingPermissions}
+            >
+              {savingPermissions ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Zoom indicator */}
+      <div className="hidden sm:block absolute bottom-6 right-16 z-10 text-xs text-[color:var(--foreground-muted)] bg-[color:var(--surface)] border border-[color:var(--border)] rounded-lg px-2.5 py-1.5 shadow-sm font-mono select-none">
         {Math.round(viewport.scale * 100)}%
       </div>
 

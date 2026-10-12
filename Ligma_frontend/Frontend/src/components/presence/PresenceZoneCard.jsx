@@ -75,10 +75,10 @@ className="absolute z-20 cursor-pointer pointer-events-auto transition-all durat
         <div className="pointer-events-none absolute inset-[10px] rounded-[20px] border border-dashed animate-pulse opacity-60" style={{ borderColor: hexToRgba(zone.color, 0.55) }} />
 
         <div className="relative flex h-full flex-col overflow-hidden rounded-[28px]">
-          <div
-            className="pointer-events-auto flex cursor-grab items-start justify-between gap-3 px-5 py-4 active:cursor-grabbing"
-            onMouseDown={(event) => canManage && onDragStart(event, zone)}
-          >
+         <div
+  className="pointer-events-auto flex cursor-grab items-start justify-between gap-3 px-5 py-4 active:cursor-grabbing touch-none"
+  onPointerDown={(event) => canManage && onDragStart(event, zone)}
+>
             <div className="min-w-0 flex-1">
               <div className="mb-1 flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full shadow-sm" style={{ backgroundColor: zone.color }} />
@@ -189,10 +189,10 @@ className="absolute z-20 cursor-pointer pointer-events-auto transition-all durat
                 key={handle.key}
                 type="button"
                 className={cn(
-                  "pointer-events-auto absolute h-4 w-4 rounded-full border-2 border-white bg-[color:var(--bg-surface)] shadow-sm",
-                  handle.className
-                )}
-                onMouseDown={(event) => onResizeStart(event, zone, handle.key)}
+  "pointer-events-auto absolute h-5 w-5 touch-none rounded-full border-2 border-white bg-[color:var(--bg-surface)] shadow-sm",
+  handle.className
+)}
+onPointerDown={(event) => onResizeStart(event, zone, handle.key)}
                 aria-label={`Resize ${zone.name}`}
               />
             ))}

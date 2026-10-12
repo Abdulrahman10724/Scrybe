@@ -313,7 +313,7 @@ export default function TaskBoardPage() {
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "relative flex items-center gap-2 px-4 py-2.5 text-xs font-semibold transition-all duration-150 rounded-t-md outline-none",
+                  "relative flex shrink-0 whitespace-nowrap items-center gap-2 px-4 py-2.5 text-xs font-semibold transition-all duration-150 rounded-t-md outline-none",
                   isActive
                     ? [
                         "text-[color:var(--text-primary)]",
