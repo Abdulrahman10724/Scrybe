@@ -248,6 +248,7 @@ export default function CanvasPage() {
   const dragEmitRef = useRef(0);
   const pendingNodeUpdatesRef = useRef({}); // nodeId -> { x, y, dataPatch }
   const updateRafRef = useRef(null);
+  const [inspectorMin, setInspectorMin] = useState(false);
 
   const flushPendingNodeUpdates = useCallback(() => {
     updateRafRef.current = null;
@@ -296,6 +297,10 @@ export default function CanvasPage() {
   const dragInFlightRef = useRef({});
   const dragPendingRef = useRef({});
   const [remoteCursors, setRemoteCursors] = useState({});
+    const isTouchDevice = useMemo(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches,
+    []
+  );
 
   const emitCursorPosition = useCallback(
     (point) => {
@@ -983,15 +988,15 @@ export default function CanvasPage() {
       const x = Math.min(draft.start.x, point.x);
       const y = Math.min(draft.start.y, point.y);
 
-      if (draft.tool === "line") {
+        if (draft.tool === "line") {
+        const ldx = Math.round(point.x - draft.start.x);
+        const ldy = Math.round(point.y - draft.start.y);
+        const tooShort = Math.abs(ldx) + Math.abs(ldy) < 6;
         const payload = {
           type: "line",
           x: Math.round(draft.start.x),
           y: Math.round(draft.start.y),
-          data: buildPresetData("line", {
-            dx: Math.round(point.x - draft.start.x),
-            dy: Math.round(point.y - draft.start.y),
-          }),
+          data: buildPresetData("line", tooShort ? {} : { dx: ldx, dy: ldy }),
         };
 
         const result = await dispatch(
@@ -1124,7 +1129,7 @@ export default function CanvasPage() {
     [activeTool, canEditCanvas, getCanvasPoint],
   );
 
-  const draftEmitTimerRef = useRef(null);
+   const draftEmitTimerRef = useRef(null);
   const handleStagePointerMove = useCallback(() => {
     const point = getCanvasPoint();
     if (!point) return;
@@ -1138,21 +1143,15 @@ export default function CanvasPage() {
       });
     }
 
-    if (arrowDraft && activeTool === "arrow") {
-      const rawDx = point.x - arrowDraft.start.x;
-      const rawDy = point.y - arrowDraft.start.y;
-      const { dx: snappedDx, dy: snappedDy } = snapArrowVector(
-        rawDx,
-        rawDy,
-        isShiftPressed,
-      );
+    const arrowState = arrowDraftRef.current;
+    if (arrowState && activeTool === "arrow") {
+      const rawDx = point.x - arrowState.start.x;
+      const rawDy = point.y - arrowState.start.y;
+      const { dx: snappedDx, dy: snappedDy } = snapArrowVector(rawDx, rawDy, isShiftPressed);
 
       arrowDraftRef.current = {
-        start: arrowDraft.start,
-        end: {
-          x: arrowDraft.start.x + snappedDx,
-          y: arrowDraft.start.y + snappedDy,
-        },
+        start: arrowState.start,
+        end: { x: arrowState.start.x + snappedDx, y: arrowState.start.y + snappedDy },
       };
       arrowShapeRef.current?.setAttrs({ points: [0, 0, snappedDx, snappedDy] });
       stageRef.current?.batchDraw();
@@ -1161,17 +1160,18 @@ export default function CanvasPage() {
         draftEmitTimerRef.current = setTimeout(() => {
           emit("canvas:draft", {
             workspaceId,
-            draft: { type: "arrow", start: arrowDraft.start, end: point },
+            draft: { type: "arrow", start: arrowState.start, end: point },
           });
           draftEmitTimerRef.current = null;
         }, 50);
       }
     }
 
-    if (creationDraft) {
-      creationDraftRef.current = { ...creationDraft, current: point };
+    const draftState = creationDraftRef.current;
+    if (draftState) {
+      creationDraftRef.current = { ...draftState, current: point };
 
-      const { tool, start } = creationDraft;
+      const { tool, start } = draftState;
       const width = Math.max(24, Math.abs(point.x - start.x));
       const height = Math.max(24, Math.abs(point.y - start.y));
       const left = Math.min(start.x, point.x);
@@ -1182,39 +1182,20 @@ export default function CanvasPage() {
       } else if (tool === "diamond" || tool === "triangle") {
         const points =
           tool === "diamond"
-            ? [
-                width / 2,
-                0,
-                width,
-                height / 2,
-                width / 2,
-                height,
-                0,
-                height / 2,
-              ]
+            ? [width / 2, 0, width, height / 2, width / 2, height, 0, height / 2]
             : [width / 2, 0, width, height, 0, height];
         draftPolygonRef.current?.setAttrs({ x: left, y: top, points });
       } else if (tool === "text") {
         const boxW = Math.max(width, 180);
         const boxH = Math.max(height, 48);
-        draftTextRectRef.current?.setAttrs({
-          x: left,
-          y: top,
-          width: boxW,
-          height: boxH,
-        });
+        draftTextRectRef.current?.setAttrs({ x: left, y: top, width: boxW, height: boxH });
         draftTextLabelRef.current?.setAttrs({
-          x: left + 12,
-          y: top + 10,
-          width: boxW - 24,
-          height: boxH - 20,
+          x: left + 12, y: top + 10, width: boxW - 24, height: boxH - 20,
         });
       } else if (tool === "circle") {
         const radius = Math.max(width, height) / 2;
         draftCircleRef.current?.setAttrs({
-          x: left + width / 2,
-          y: top + height / 2,
-          radius,
+          x: left + width / 2, y: top + height / 2, radius,
         });
       } else if (tool === "line") {
         draftLineRef.current?.setAttrs({
@@ -1226,34 +1207,20 @@ export default function CanvasPage() {
 
       if (!draftEmitTimerRef.current) {
         draftEmitTimerRef.current = setTimeout(() => {
-          emit("canvas:draft", {
-            workspaceId,
-            draft: { ...creationDraft, current: point },
-          });
+          emit("canvas:draft", { workspaceId, draft: { ...draftState, current: point } });
           draftEmitTimerRef.current = null;
         }, 50);
       }
     }
-  }, [
-    activeTool,
-    arrowDraft,
-    creationDraft,
-    emitCursorPosition,
-    getCanvasPoint,
-    isShiftPressed,
-    emit,
-    workspaceId,
-  ]);
+  }, [activeTool, emitCursorPosition, getCanvasPoint, isShiftPressed, emit, workspaceId]);
 
-  const handleStagePointerUp = useCallback(async () => {
-    if (!canEditCanvas) {
-      return;
-    }
+    const handleStagePointerUp = useCallback(async () => {
+    if (!canEditCanvas) return;
 
-    if (arrowDraft && activeTool === "arrow") {
-      const finalEnd = arrowDraftRef.current?.end || arrowDraft.end;
-      const dx = finalEnd.x - arrowDraft.start.x;
-      const dy = finalEnd.y - arrowDraft.start.y;
+    const arrowState = arrowDraftRef.current;
+    if (arrowState && activeTool === "arrow") {
+      const dx = arrowState.end.x - arrowState.start.x;
+      const dy = arrowState.end.y - arrowState.start.y;
       if (Math.abs(dx) + Math.abs(dy) < 6) {
         setArrowDraft(null);
         arrowDraftRef.current = null;
@@ -1262,13 +1229,9 @@ export default function CanvasPage() {
 
       const payload = {
         type: "arrow",
-        x: Math.round(arrowDraft.start.x),
-        y: Math.round(arrowDraft.start.y),
-        data: {
-          ...DEFAULT_NODE_DATA.arrow,
-          dx: Math.round(dx),
-          dy: Math.round(dy),
-        },
+        x: Math.round(arrowState.start.x),
+        y: Math.round(arrowState.start.y),
+        data: { ...DEFAULT_NODE_DATA.arrow, dx: Math.round(dx), dy: Math.round(dy) },
       };
 
       const result = await dispatch(createCanvasNode({ workspaceId, payload }));
@@ -1282,24 +1245,15 @@ export default function CanvasPage() {
       return;
     }
 
-    if (creationDraft) {
-      const draft = creationDraftRef.current || creationDraft;
+    const draft = creationDraftRef.current;
+    if (draft) {
       setCreationDraft(null);
       creationDraftRef.current = null;
       emit("canvas:draft", { workspaceId, draft: null });
       await commitCreationDraft(draft);
       setActiveTool("select");
     }
-  }, [
-    activeTool,
-    arrowDraft,
-    canEditCanvas,
-    commitCreationDraft,
-    creationDraft,
-    dispatch,
-    workspaceId,
-    emit,
-  ]);
+  }, [activeTool, canEditCanvas, commitCreationDraft, dispatch, workspaceId, emit]);
   // ───────── TOUCH SUPPORT ─────────
   const lastTouchRef = useRef(0);
   const lastPinchRef = useRef(null);
@@ -2353,6 +2307,7 @@ const lastNodeClickRef = useRef({ id: null, t: 0 });
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={handleStageClick}
+        onTap={handleStageClick}
         onDragMove={(e) => {
           if (e.target !== e.target.getStage()) {
             return;
@@ -2675,9 +2630,14 @@ const lastNodeClickRef = useRef({ id: null, t: 0 });
               );
             })()}
 
-          <Transformer
+                   <Transformer
             ref={transformerRef}
             rotateEnabled={false}
+            anchorSize={isTouchDevice ? 22 : 10}
+            anchorCornerRadius={isTouchDevice ? 11 : 2}
+            anchorStrokeWidth={2}
+            borderStrokeWidth={isTouchDevice ? 2 : 1}
+            padding={isTouchDevice ? 6 : 0}
             keepRatio={
               selectedNode?.type === "circle" ||
               selectedNode?.type === "diamond" ||
@@ -2780,107 +2740,124 @@ const lastNodeClickRef = useRef({ id: null, t: 0 });
       ) : null}
 
       {selectedNode && selectedNodeBounds && !editingNodeId && (
-       <div
-  className="absolute z-20 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3 shadow-2xl
-    left-2 right-2 bottom-20 max-h-[45vh] overflow-y-auto
-    md:left-auto md:right-4 md:top-20 md:bottom-auto md:w-72"
->
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-[color:var(--text-primary)]">
-                Node inspector
-              </p>
-              <p className="text-xs text-[color:var(--text-secondary)] capitalize">
-                {selectedNode.type}
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedNodeIds([])}
-              className="text-xs font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
-            >
-              Clear
-            </button>
-          </div>
-
-          <div className="mb-3 text-xs text-[color:var(--text-secondary)]">
-            Double-click the node to edit its text. Resize with the corner
-            handles.
-          </div>
-          {selectedNodePermissions.canEdit && !["arrow", "line"].includes(selectedNode.type) && (
-  <button
-    type="button"
-    onClick={() => handleNodeDoubleClick(selectedNode.id)}
-    className="mb-3 w-full rounded-lg bg-[color:var(--primary)] px-3 py-2 text-xs font-semibold text-[color:var(--primary-foreground)]"
+  <div
+    className="absolute z-20 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3 shadow-2xl
+      left-2 right-2 bottom-3 max-h-[38vh] overflow-y-auto
+      md:left-auto md:right-4 md:top-20 md:bottom-auto md:w-72 md:max-h-none"
   >
-    Edit text
-  </button>
-)}
+    {/* Header */}
+    <div className="mb-3 flex items-center justify-between">
+      <div>
+        <p className="text-sm font-semibold text-[color:var(--text-primary)]">
+          Node inspector
+        </p>
+        <p className="text-xs text-[color:var(--text-secondary)] capitalize">
+          {selectedNode.type}
+        </p>
+      </div>
 
-          {inspectorColors.length > 0 && (
-            <div className="space-y-4">
-              {inspectorColors.includes("fill") && (
-                <ColorSwatchPicker
-                  label="Background"
-                  value={
-                    selectedNode.data?.fill &&
-                    selectedNode.data.fill !== "rgba(0,0,0,0)"
-                      ? selectedNode.data.fill
-                      : "transparent"
-                  }
-                  onChange={(color) =>
-                    handleInspectorChange(
-                      "fill",
-                      color === "transparent" ? "rgba(0,0,0,0)" : color,
-                    )
-                  }
-                  colors={BACKGROUND_COLORS}
-                  allowTransparent
-                />
-              )}
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setInspectorMin((v) => !v)}
+          className="md:hidden mr-3 text-xs font-medium text-[color:var(--text-secondary)]"
+        >
+          {inspectorMin ? "Expand" : "Minimize"}
+        </button>
 
-              {inspectorColors.includes("stroke") && (
-                <ColorSwatchPicker
-                  label="Border"
-                  value={selectedNode.data?.stroke || "#000000"}
-                  onChange={(color) => handleInspectorChange("stroke", color)}
-                  colors={STROKE_COLORS}
-                />
-              )}
+        <button
+          onClick={() => setSelectedNodeIds([])}
+          className="text-xs font-medium text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
 
-              {inspectorColors.includes("color") &&
-                selectedNode.type === "text" && (
-                  <ColorSwatchPicker
-                    label="Text color"
-                    value={selectedNode.data?.color || "#18181B"}
-                    onChange={(color) => handleInspectorChange("color", color)}
-                    colors={STROKE_COLORS}
-                  />
-                )}
+    {/* Collapsible body (mobile par minimize hota hai, desktop par hamesha dikhta hai) */}
+    <div className={inspectorMin ? "hidden md:block" : "block"}>
+      <div className="mb-3 text-xs text-[color:var(--text-secondary)]">
+        Double-click the node to edit its text. Resize with the corner
+        handles.
+      </div>
 
-              {inspectorColors.includes("textColor") &&
-                selectedNode.type === "sticky" && (
-                  <ColorSwatchPicker
-                    label="Text color"
-                    value={selectedNode.data?.textColor || "#18181B"}
-                    onChange={(color) =>
-                      handleInspectorChange("textColor", color)
-                    }
-                    colors={STROKE_COLORS}
-                  />
-                )}
+      {selectedNodePermissions.canEdit &&
+        !["arrow", "line"].includes(selectedNode.type) && (
+          <button
+            type="button"
+            onClick={() => handleNodeDoubleClick(selectedNode.id)}
+            className="mb-3 w-full rounded-lg bg-[color:var(--primary)] px-3 py-2 text-xs font-semibold text-[color:var(--primary-foreground)]"
+          >
+            Edit text
+          </button>
+        )}
 
-              {selectedNode.type === "arrow" && (
-                <ColorSwatchPicker
-                  label="Arrow color"
-                  value={selectedNode.data?.color || "#6366F1"}
-                  onChange={(color) => handleInspectorChange("color", color)}
-                  colors={STROKE_COLORS}
-                />
-              )}
-            </div>
+      {inspectorColors.length > 0 && (
+        <div className="space-y-4">
+          {inspectorColors.includes("fill") && (
+            <ColorSwatchPicker
+              label="Background"
+              value={
+                selectedNode.data?.fill &&
+                selectedNode.data.fill !== "rgba(0,0,0,0)"
+                  ? selectedNode.data.fill
+                  : "transparent"
+              }
+              onChange={(color) =>
+                handleInspectorChange(
+                  "fill",
+                  color === "transparent" ? "rgba(0,0,0,0)" : color,
+                )
+              }
+              colors={BACKGROUND_COLORS}
+              allowTransparent
+            />
+          )}
+
+          {inspectorColors.includes("stroke") && (
+            <ColorSwatchPicker
+              label="Border"
+              value={selectedNode.data?.stroke || "#000000"}
+              onChange={(color) => handleInspectorChange("stroke", color)}
+              colors={STROKE_COLORS}
+            />
+          )}
+
+          {inspectorColors.includes("color") &&
+            selectedNode.type === "text" && (
+              <ColorSwatchPicker
+                label="Text color"
+                value={selectedNode.data?.color || "#18181B"}
+                onChange={(color) => handleInspectorChange("color", color)}
+                colors={STROKE_COLORS}
+              />
+            )}
+
+          {inspectorColors.includes("textColor") &&
+            selectedNode.type === "sticky" && (
+              <ColorSwatchPicker
+                label="Text color"
+                value={selectedNode.data?.textColor || "#18181B"}
+                onChange={(color) =>
+                  handleInspectorChange("textColor", color)
+                }
+                colors={STROKE_COLORS}
+              />
+            )}
+
+          {selectedNode.type === "arrow" && (
+            <ColorSwatchPicker
+              label="Arrow color"
+              value={selectedNode.data?.color || "#6366F1"}
+              onChange={(color) => handleInspectorChange("color", color)}
+              colors={STROKE_COLORS}
+            />
           )}
         </div>
       )}
+    </div>
+  </div>
+)}
 
       {hoveredTooltip && hoveredBounds && (
         <div
@@ -2962,10 +2939,10 @@ const lastNodeClickRef = useRef({ id: null, t: 0 });
                     ? editingNode?.data?.textColor || "#18181B"
                     : "#000000",
                 fontFamily: "Inter, system-ui, sans-serif",
-                fontSize:
-                  editingNode?.type === "text"
-                    ? `${editingNode?.data?.fontSize || 16}px`
-                    : "13px",
+                fontSize: `${Math.max(
+                  isTouchDevice ? 16 : 8,
+                  (editingNode?.type === "text" ? editingNode?.data?.fontSize || 16 : 13) * viewport.scale
+                )}px`,
                 lineHeight: 1.4,
                 textAlign:
                   editingNode?.type === "sticky" ||

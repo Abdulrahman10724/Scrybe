@@ -46,8 +46,8 @@ function CanvasToolbar({
   return (
     <div className="absolute left-1/2 -translate-x-1/2 top-2 md:top-4 z-20 flex items-center gap-1.5 rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] px-2 py-1.5 shadow-[var(--shadow-md)] backdrop-blur-sm max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar">
       {/* Tool buttons */}
-      <div className="relative flex shrink-0 cursor-pointer flex-col items-center flex items-center gap-0.5">
-        {tools.map(({ id, label, icon: Icon }) => {
+      <div className="relative flex shrink-0 flex-row items-center gap-0.5">       
+         {tools.map(({ id, label, icon: Icon }) => {
           const isActive = activeTool === id;
           return (
             <button
@@ -100,8 +100,7 @@ function CanvasToolbar({
 
       {/* Lock + Permissions (Lead + selected node) */}
       {selectedNode && isLead && (
-        <div className="relative flex shrink-0 cursor-pointer flex-col items-center flex items-center gap-1 border-l border-[color:var(--border)] pl-2">
-          <button
+        <div className="relative flex shrink-0 flex-row items-center gap-1 border-l border-[color:var(--border)] pl-2">          <button
             onClick={onToggleLock}
             title={selectedNode.locked ? "Unlock node" : "Lock node"}
             className="flex cursor-pointer items-center gap-1 rounded-lg border border-[color:var(--border)] px-2.5 py-1.5 text-[11px] font-medium text-[color:var(--foreground-secondary)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--foreground)] transition-colors"

@@ -796,3 +796,11 @@ html, body, #root { overscroll-behavior: none; }
 @media (max-width: 640px) {
   input, textarea, select { font-size: 16px !important; }
 }
+/* Mobile performance: landing blobs halke karo */
+@media (max-width: 768px) {
+  .hero-blob {
+    filter: blur(45px);
+    animation: none !important;
+    will-change: auto;
+  }
+}

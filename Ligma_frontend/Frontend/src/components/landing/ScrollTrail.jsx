@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   motion,
   useScroll,
@@ -41,7 +42,7 @@ function Tick({ at, progress }) {
   );
 }
 
-export default function ScrollTrail() {
+function ScrollTrailInner() {
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, {
@@ -160,4 +161,18 @@ export default function ScrollTrail() {
       `}</style>
     </div>
   );
+}
+export default function ScrollTrail() {
+  const [show, setShow] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = (e) => setShow(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return show ? <ScrollTrailInner /> : null;
 }

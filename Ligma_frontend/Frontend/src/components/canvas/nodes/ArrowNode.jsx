@@ -1,6 +1,9 @@
 import React from "react";
 import { Group, Arrow, Circle, Line, Text } from "react-konva";
-
+const IS_COARSE =
+  typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+const HANDLE_RADIUS = IS_COARSE ? 13 : 6;
+const HIT_WIDTH = IS_COARSE ? 30 : 16;
 // ArrowNode renders as a directed arrow from (x,y) to (x+dx, y+dy)
 // data.dx and data.dy encode the vector; defaults to a 150px horizontal arrow
 function ArrowNode({
@@ -57,8 +60,8 @@ function ArrowNode({
           <Line
             points={[0, 0, dx, dy]}
             stroke="transparent"
-            strokeWidth={16}
-            hitStrokeWidth={16}
+            strokeWidth={HIT_WIDTH}
+            hitStrokeWidth={HIT_WIDTH}
             listening
           />
 
@@ -77,8 +80,8 @@ function ArrowNode({
           <Arrow
             points={[0, 0, dx, dy]}
             stroke="transparent"
-            strokeWidth={16}
-            hitStrokeWidth={16}
+            strokeWidth={HIT_WIDTH}
+            hitStrokeWidth={HIT_WIDTH}
             listening
           />
 
@@ -130,7 +133,7 @@ function ArrowNode({
             name="endpoint-handle"
             x={0}
             y={0}
-            radius={6}
+            radius={HANDLE_RADIUS}
             fill="#FFFFFF"
             stroke="#4F46E5"
             strokeWidth={2}

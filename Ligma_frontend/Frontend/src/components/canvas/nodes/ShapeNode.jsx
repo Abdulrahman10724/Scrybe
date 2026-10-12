@@ -203,6 +203,8 @@ function ShapeNode({
         }}
         onClick={handleClick}
         onDblClick={() => permissions?.canEdit && onDoubleClick(node.id)}
+        onTap={handleClick}                                                    // NEW
+        onDblTap={() => permissions?.canEdit && onDoubleClick(node.id)}
         onTransform={(e) =>
           permissions?.canResize && onTransform(node.id, e.target)
         }

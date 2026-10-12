@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { Palette } from "lucide-react";
 import ColorSwatchPicker from "./ColorSwatchPicker";
 
 export const STROKE_COLORS = [
@@ -43,14 +44,25 @@ function ToolStylePanel({
   opacity,
   onOpacityChange,
 }) {
+    const [mobileOpen, setMobileOpen] = useState(false);
   if (!tool || tool === "select") return null;
 
-  return (
-    <div
-      className="absolute z-20 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3.5 shadow-2xl space-y-4
-  left-2 right-2 bottom-20 max-h-[45vh] overflow-y-auto
-  md:left-auto md:right-4 md:top-20 md:bottom-auto md:w-56"
-    >
+   return (
+    <>
+      <button
+        type="button"
+        onClick={() => setMobileOpen((v) => !v)}
+        className="md:hidden absolute left-2 bottom-3 z-20 flex items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[color:var(--bg-surface)] px-3 py-2 text-xs font-semibold text-[color:var(--text-primary)] shadow-lg"
+      >
+        <Palette className="h-3.5 w-3.5" /> Style
+      </button>
+
+      <div
+        className={`absolute z-20 rounded-2xl border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-3.5 shadow-2xl space-y-4
+  left-2 right-2 bottom-14 max-h-[40vh] overflow-y-auto
+  md:left-auto md:right-4 md:top-20 md:bottom-auto md:w-56 md:max-h-none md:block
+  ${mobileOpen ? "block" : "hidden"}`}
+      >
       <ColorSwatchPicker
         label="Stroke"
         value={strokeColor}
@@ -134,6 +146,7 @@ function ToolStylePanel({
         />
       </div>
     </div>
+    </>
   );
 }
 export default React.memo(ToolStylePanel);
