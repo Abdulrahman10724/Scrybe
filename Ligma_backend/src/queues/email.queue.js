@@ -17,7 +17,12 @@ const getEmailQueue = () => {
 
 const enqueueEmailJob = async (jobData) => {
   const payload = emailJobSchema.parse(jobData);
-  return getEmailQueue().add(payload.type === "verification" ? "send-verification-email" : "send-invitation-email", payload, {
+  const jobName = {
+    verification: "send-verification-email",
+    invitation: "send-invitation-email",
+    "password-reset": "send-password-reset-email",
+  }[payload.type];
+  return getEmailQueue().add(jobName, payload, {
     jobId: buildEmailJobId(payload),
   });
 };

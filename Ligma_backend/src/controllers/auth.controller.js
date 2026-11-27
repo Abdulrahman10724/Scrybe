@@ -6,6 +6,8 @@ import {
   refreshSession,
   logout,
   logoutAll,
+  forgotPassword,
+  resetPassword,
 } from "../services/auth.service.js";
 import { sendSuccess } from "../utils/api-response.util.js";
 import { verifyAccessToken } from "../utils/jwt.util.js";
@@ -112,7 +114,30 @@ const logoutAllUser = async (req, res, next) => {
   }
 };
 
+const GENERIC_FORGOT_MESSAGE = "If an account exists for that email, we've sent a link to reset the password.";
+
+const forgotPasswordUser = async (req, res, next) => {
+  try {
+    await forgotPassword({ email: req.body.email });
+    return sendSuccess(res, 200, GENERIC_FORGOT_MESSAGE);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const resetPasswordUser = async (req, res, next) => {
+  try {
+    await resetPassword({ token: req.body.token, password: req.body.password });
+    clearRefreshCookie(res);
+    return sendSuccess(res, 200, "Your password has been reset. Please sign in with your new password.");
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export {
+  forgotPasswordUser,
+  resetPasswordUser,
   registerUser,
   loginUser,
   refreshUser,
@@ -124,6 +149,8 @@ export {
 };
 
 export default {
+  forgotPasswordUser,
+  resetPasswordUser,
   registerUser,
   loginUser,
   refreshUser,

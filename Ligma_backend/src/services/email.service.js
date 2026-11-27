@@ -28,20 +28,23 @@ const buildVerificationUrl = (token) => {
   return `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
 };
 
-const sendVerificationEmail = async ({ to, name, token }) => {
-  const api = getApiInstance();
-  if (!api) {
-    throw new Error("Brevo is not configured (BREVO_API_KEY / GMAIL_USER missing)");
-  }
+const escapeHtml = (value) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
-  const verificationUrl = buildVerificationUrl(token);
-   const html = `
+// Shared branded layout (gradient header, card, button, feature chips) for
+// the verification and password-reset emails.
+const buildBrandedEmailHtml = ({ title, icon, heading, intro, buttonLabel, url, expiryNote, footerNote }) => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verify your email</title>
+  <title>${title}</title>
 </head>
 <body style="margin:0;padding:0;background-color:#F1F5F9;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F1F5F9;padding:32px 12px;">
@@ -68,10 +71,10 @@ const sendVerificationEmail = async ({ to, name, token }) => {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:-28px;background-color:#FFFFFF;border-radius:20px;border:1px solid #E2E8F0;">
                 <tr>
                   <td align="center" style="padding:32px 24px 8px;">
-                    <div style="font-size:42px;line-height:1;">&#9993;&#65039;</div>
-                    <h1 style="margin:14px 0 8px;font-size:24px;color:#0F172A;">Hi ${name || "there"}, verify your email</h1>
+                    <div style="font-size:42px;line-height:1;">${icon}</div>
+                    <h1 style="margin:14px 0 8px;font-size:24px;color:#0F172A;">${heading}</h1>
                     <p style="margin:0;font-size:15px;line-height:1.6;color:#475569;">
-                      Welcome to Scrybe! Verify your email address with one click to activate your account and start brainstorming with your team.
+                      ${intro}
                     </p>
                   </td>
                 </tr>
@@ -79,16 +82,16 @@ const sendVerificationEmail = async ({ to, name, token }) => {
                 <!-- Button -->
                 <tr>
                   <td align="center" style="padding:24px 24px 8px;">
-                    <a href="${verificationUrl}" target="_blank"
+                    <a href="${url}" target="_blank"
                        style="display:inline-block;background-color:#0D9488;background-image:linear-gradient(135deg,#0D9488,#4F46E5);color:#FFFFFF;text-decoration:none;font-weight:700;font-size:16px;padding:15px 38px;border-radius:14px;">
-                      Verify my email &rarr;
+                      ${buttonLabel} &rarr;
                     </a>
                   </td>
                 </tr>
 
                 <tr>
                   <td align="center" style="padding:8px 24px 28px;">
-                    <p style="margin:0;font-size:12px;color:#94A3B8;">This link expires in 24 hours.</p>
+                    <p style="margin:0;font-size:12px;color:#94A3B8;">${expiryNote}</p>
                   </td>
                 </tr>
               </table>
@@ -114,7 +117,7 @@ const sendVerificationEmail = async ({ to, name, token }) => {
           <tr>
             <td align="center" style="padding:24px 36px 32px;">
               <p style="margin:0;font-size:12px;line-height:1.6;color:#94A3B8;">
-                If you didn't create a Scrybe account, you can safely ignore this email.<br />
+                ${footerNote}<br />
                 &copy; ${new Date().getFullYear()} Scrybe. Built with care.
               </p>
             </td>
@@ -126,7 +129,26 @@ const sendVerificationEmail = async ({ to, name, token }) => {
   </table>
 </body>
 </html>
-  `;
+`;
+
+const sendVerificationEmail = async ({ to, name, token }) => {
+  const api = getApiInstance();
+  if (!api) {
+    throw new Error("Brevo is not configured (BREVO_API_KEY / GMAIL_USER missing)");
+  }
+
+  const verificationUrl = buildVerificationUrl(token);
+  const html = buildBrandedEmailHtml({
+    title: "Verify your email",
+    icon: "&#9993;&#65039;",
+    heading: `Hi ${escapeHtml(name || "there")}, verify your email`,
+    intro:
+      "Welcome to Scrybe! Verify your email address with one click to activate your account and start brainstorming with your team.",
+    buttonLabel: "Verify my email",
+    url: verificationUrl,
+    expiryNote: "This link expires in 24 hours.",
+    footerNote: "If you didn't create a Scrybe account, you can safely ignore this email.",
+  });
   const text = `Hi ${name || "there"},\n\nWelcome to Scrybe. Please verify your email address to get started.\n\n${verificationUrl}\n\nThis verification link expires in 24 hours.`;
 
   try {
@@ -208,10 +230,70 @@ const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, invi
   }
 };
 
-export { buildVerificationUrl, sendVerificationEmail, sendInvitationEmail };
+const buildPasswordResetUrl = (token) => {
+  const baseUrl = config.CLIENT_URL.replace(/\/$/, "");
+  return `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+};
+
+const buildPasswordResetEmail = ({ name, token }) => {
+  const resetUrl = buildPasswordResetUrl(token);
+  const html = buildBrandedEmailHtml({
+    title: "Reset your password",
+    icon: "&#128274;",
+    heading: `Hi ${escapeHtml(name || "there")}, reset your password`,
+    intro:
+      "We received a request to reset the password for your Scrybe account. Choose a new password with the button below. Resetting it signs you out of every device.",
+    buttonLabel: "Choose a new password",
+    url: resetUrl,
+    expiryNote: "This link expires in 1 hour and can only be used once.",
+    footerNote: "If you didn't ask to reset your password, you can safely ignore this email. Your password won't change.",
+  });
+  const text = `Hi ${name || "there"},\n\nWe received a request to reset your Scrybe password. Choose a new one here:\n\n${resetUrl}\n\nThis link expires in 1 hour and can only be used once. If you didn't ask for this, you can ignore this email.`;
+  return { html, text, resetUrl };
+};
+
+const sendPasswordResetEmail = async ({ to, name, token }) => {
+  const api = getApiInstance();
+  if (!api) {
+    throw new Error("Brevo is not configured (BREVO_API_KEY / GMAIL_USER missing)");
+  }
+
+  const { html, text } = buildPasswordResetEmail({ name, token });
+
+  try {
+    const result = await api.sendTransacEmail({
+      sender: { email: config.GMAIL_USER, name: "Scrybe" },
+      to: [{ email: to, name: name || undefined }],
+      subject: "Reset your Scrybe password",
+      htmlContent: html,
+      textContent: text,
+    });
+
+    logger.info("Password reset email sent via Brevo", { id: result?.messageId });
+    return { success: true, id: result?.messageId };
+  } catch (error) {
+    logger.error("Failed to send password reset email", {
+      message: error?.message,
+      status: error?.status,
+      body: error?.response?.body || error?.response?.text,
+    });
+    throw new Error("We couldn't send the password reset email right now.");
+  }
+};
+
+export {
+  buildVerificationUrl,
+  buildPasswordResetUrl,
+  buildPasswordResetEmail,
+  sendVerificationEmail,
+  sendInvitationEmail,
+  sendPasswordResetEmail,
+};
 
 export default {
   buildVerificationUrl,
+  buildPasswordResetUrl,
   sendVerificationEmail,
   sendInvitationEmail,
+  sendPasswordResetEmail,
 };

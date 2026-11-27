@@ -4,7 +4,7 @@ import { Worker } from "bullmq";
 import { buildBullMQWorkerOptions, registerBullMQWorker } from "../config/bullmq.config.js";
 import { emailJobSchema } from "../jobs/email.job.js";
 import { EMAIL_QUEUE_NAME } from "../queues/email.queue.js";
-import { sendInvitationEmail, sendVerificationEmail } from "../services/email.service.js";
+import { sendInvitationEmail, sendPasswordResetEmail, sendVerificationEmail } from "../services/email.service.js";
 import { findInvitationById } from "../models/invitation.model.js";
 import logger from "../utils/logger.util.js";
 
@@ -18,6 +18,12 @@ const processEmailJob = async (job) => {
   if (payload.type === "verification") {
     const result = await sendVerificationEmail({ to: payload.to, name: payload.name, token: payload.token });
     logger.info("email.worker: verification email sent", { jobId: job.id, to: payload.to, skipped: Boolean(result?.skipped) });
+    return result;
+  }
+
+  if (payload.type === "password-reset") {
+    const result = await sendPasswordResetEmail({ to: payload.to, name: payload.name, token: payload.token });
+    logger.info("email.worker: password reset email sent", { jobId: job.id, skipped: Boolean(result?.skipped) });
     return result;
   }
 

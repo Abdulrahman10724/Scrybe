@@ -13,8 +13,12 @@ import {
   markEmailVerified,
 } from "../models/user.model.js";
 import {
+  clearPasswordResetToken,
+  consumePasswordResetToken,
+  findUserByPasswordResetToken,
   getTokenVersion,
   incrementTokenVersion,
+  setPasswordResetToken,
 } from "../models/user.model.js";
 import {
   claimSessionForRotation,
@@ -248,7 +252,72 @@ const resendVerificationEmail = async ({ email }) => {
   return { success: true };
 };
 
-export { register, login, verifyEmail, resendVerificationEmail, refreshSession, logout, logoutAll };
+// Always resolves the same way whether or not the account exists (no
+// account enumeration). The email is queued fire-and-forget so response
+// time doesn't depend on Redis either.
+const forgotPassword = async ({ email }) => {
+  await ensureUserIndexes();
+  const user = await findUserByEmail(email);
+
+  if (user) {
+    const token = crypto.randomBytes(32).toString("hex");
+    await setPasswordResetToken(user._id, token);
+    enqueueEmailJob({
+      type: "password-reset",
+      to: user.email,
+      name: user.name,
+      token,
+      userId: user._id.toString(),
+    }).catch((error) => {
+      logger.warn("password reset email job enqueue failed", { message: error?.message, userId: user._id.toString() });
+    });
+  }
+
+  return { success: true };
+};
+
+const resetPassword = async ({ token, password }) => {
+  const resetError = (statusCode, message, code) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    error.code = code;
+    return error;
+  };
+
+  const user = await findUserByPasswordResetToken(token);
+  if (!user) {
+    throw resetError(400, "This reset link is invalid or has already been used.", "RESET_TOKEN_INVALID");
+  }
+
+  if (!user.passwordResetExpiresAt || new Date(user.passwordResetExpiresAt).getTime() <= Date.now()) {
+    await clearPasswordResetToken(user._id);
+    throw resetError(410, "This reset link has expired. Please request a new one.", "RESET_TOKEN_EXPIRED");
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+  const updated = await consumePasswordResetToken(token, hashedPassword);
+  if (!updated) {
+    // Used (or expired) between the lookup and the atomic update.
+    throw resetError(400, "This reset link is invalid or has already been used.", "RESET_TOKEN_INVALID");
+  }
+
+  // tokenVersion was bumped in the same update; also end every session.
+  await revokeAllSessionsForUser(updated._id.toString(), "password-reset");
+  logger.info("password reset completed", { userId: updated._id.toString() });
+  return { success: true };
+};
+
+export {
+  register,
+  login,
+  verifyEmail,
+  resendVerificationEmail,
+  refreshSession,
+  logout,
+  logoutAll,
+  forgotPassword,
+  resetPassword,
+};
 
 export default {
   register,
@@ -258,4 +327,6 @@ export default {
   refreshSession,
   logout,
   logoutAll,
+  forgotPassword,
+  resetPassword,
 };
