@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "../ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -54,6 +55,9 @@ export default function AccountMenu() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64">
+        {/* Base UI requires group labels inside a Menu.Group; without it the
+            menu threw "MenuGroupContext is missing" and blanked the page. */}
+        <DropdownMenuGroup>
         <DropdownMenuLabel className="px-3 py-2.5">
           <div className="flex items-center gap-3">
             <Avatar className="size-9">
@@ -67,6 +71,7 @@ export default function AccountMenu() {
             </div>
           </div>
         </DropdownMenuLabel>
+        </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
 
@@ -87,8 +92,7 @@ export default function AccountMenu() {
 
         <DropdownMenuItem
           className="gap-2 px-3 py-2 text-sm text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]"
-          onSelect={(event) => {
-            event.preventDefault();
+          onClick={() => {
             handleLogout();
           }}
         >
@@ -97,8 +101,7 @@ export default function AccountMenu() {
         </DropdownMenuItem>
         <DropdownMenuItem
           className="gap-2 px-3 py-2 text-sm text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]"
-          onSelect={(event) => {
-            event.preventDefault();
+          onClick={() => {
             handleLogout({ everywhere: true });
           }}
         >
