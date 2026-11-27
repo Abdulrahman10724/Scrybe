@@ -63,19 +63,14 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_WINDOW_MS: z.string().transform((v) => parseInt(v, 10)).default("900000"), // 15 min
 AUTH_RATE_LIMIT_MAX: z.string().transform((v) => parseInt(v, 10)).default("20"),
   LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
-  EMAIL_FROM: z.string().email().default("onboarding@resend.dev"),
-  RESEND_API_KEY: z.string().optional().default(""),
+  // Email delivery — Brevo transactional email API over HTTPS
+  // (src/services/email.service.js). GMAIL_USER is the verified Brevo
+  // *sender address* (the name is historical); no Gmail/SMTP is used.
   BREVO_API_KEY: z.string().optional().default(""),
-  // Email delivery — Nodemailer + Gmail SMTP (App Password). This is the
-  // only email transport this project uses; Resend is not integrated.
   GMAIL_USER: z.string().optional().default(""),
-  GMAIL_CLIENT_ID: z.string().optional().default(""),
-  GMAIL_CLIENT_SECRET: z.string().optional().default(""),
-  GMAIL_REFRESH_TOKEN: z.string().optional().default(""),
-  // GMAIL_APP_PASSWORD: z.string().optional().default(""),
-  // Redis — connection only; no feature usage yet (see src/config/redis.config.js).
-  // Defaults to the Docker Compose service name "redis"; falls back to localhost
-  // for running the backend outside of Docker.
+  // Redis — BullMQ job queues and the Socket.IO Redis adapter.
+  // Defaults to localhost; Docker Compose overrides it with the "redis"
+  // service name.
   REDIS_URL: z.string().default("redis://localhost:6379"),
   // Set to "false" to run without Redis (tests / minimal local dev): BullMQ
   // queues reject immediately instead of buffering, and Socket.IO uses the
