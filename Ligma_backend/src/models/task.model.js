@@ -35,7 +35,7 @@ const createTask = async (doc) => {
     parentTaskId: doc.parentTaskId ? new ObjectId(doc.parentTaskId) : null,
     title: doc.title || "",
     description: doc.description || "",
-    type: doc.type || "Action", // Action, Decision, Information, Reference
+    type: doc.type || "Action", // Action, Decision, Question, Information, Reference
     status: doc.status || (doc.type === "Action" ? "To Do" : null),
     assigneeId: doc.assigneeId ? new ObjectId(doc.assigneeId) : null,
     dueDate: doc.dueDate ? new Date(doc.dueDate) : null,

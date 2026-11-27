@@ -126,7 +126,7 @@ export default function FinalCTASection() {
           }}
         >
           <Sparkles size={11} />
-          Early access · Free forever for solo use
+          Early access · Free to use
         </motion.div>
 
         {/* Headline */}
@@ -169,8 +169,8 @@ export default function FinalCTASection() {
             lineHeight: 1.65,
           }}
         >
-          Join the teams already turning brainstorms into shipped features — without a single
-          manual Jira ticket.
+          Turn your team's brainstorms into tasks on a shared board — without writing a single
+          ticket by hand.
         </motion.p>
 
         {/* Magnetic CTA */}
@@ -219,7 +219,7 @@ export default function FinalCTASection() {
           transition={{ delay: 0.5 }}
           style={{ marginTop: 20, fontSize: 12, color: "rgba(255,255,255,0.45)" }}
         >
-          No credit card · Works with your existing team · Cancel anytime
+          Free to use · No credit card · Invite your team by email
         </motion.p>
       </div>
     </section>

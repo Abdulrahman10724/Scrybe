@@ -15,6 +15,8 @@ import SettingsPage from "../pages/SettingsPage";
 import AcceptInvitationPage from "../pages/AcceptInvitationPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
 import VerifyRequiredPage from "../pages/VerifyRequiredPage";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function AppRoutes() {
@@ -30,6 +32,8 @@ export default function AppRoutes() {
         <Route path="/invite/:token" element={<AcceptInvitationPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/verify-required" element={<VerifyRequiredPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Dashboard Route */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

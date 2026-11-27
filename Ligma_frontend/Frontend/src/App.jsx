@@ -4,7 +4,16 @@ import { Provider } from "react-redux";
 import { Toaster } from "sonner";
 import { store } from "./redux/store";
 import AppRoutes from "./routes/AppRoutes";
-import { bootstrapAuth } from "./redux/authSlice";
+import { bootstrapAuth, sessionExpired } from "./redux/authSlice";
+import { setSessionExpiredHandler } from "./services/api.service";
+import { clearLegacyStoredToken } from "./services/token.store";
+
+// Drop the 1-day JWT older builds stored in localStorage.
+clearLegacyStoredToken();
+
+// A refresh that fails mid-session logs the user out; ProtectedRoute then
+// sends them to /login.
+setSessionExpiredHandler(() => store.dispatch(sessionExpired()));
 
 function App() {
   return (

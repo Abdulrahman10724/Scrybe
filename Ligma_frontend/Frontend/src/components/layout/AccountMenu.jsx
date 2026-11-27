@@ -1,19 +1,20 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { LogOut, UserCircle2 } from "lucide-react";
+import { LogOut, MonitorX, UserCircle2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import ThemeToggle from "../ui/ThemeToggle";
-import { logoutUser, clearAuthState } from "../../redux/authSlice";
+import { logoutUser, logoutAllDevices, clearAuthState } from "../../redux/authSlice";
 
 export default function AccountMenu() {
   const dispatch = useDispatch();
@@ -28,11 +29,11 @@ export default function AccountMenu() {
     .slice(0, 2)
     .toUpperCase();
 
-  const handleLogout = async () => {
+  const handleLogout = async ({ everywhere = false } = {}) => {
     if (busy) return;
     setBusy(true);
     try {
-      await dispatch(logoutUser()).unwrap();
+      await dispatch(everywhere ? logoutAllDevices() : logoutUser()).unwrap();
     } finally {
       dispatch(clearAuthState());
       navigate("/login", { replace: true });
@@ -54,6 +55,9 @@ export default function AccountMenu() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64">
+        {/* Base UI requires group labels inside a Menu.Group; without it the
+            menu threw "MenuGroupContext is missing" and blanked the page. */}
+        <DropdownMenuGroup>
         <DropdownMenuLabel className="px-3 py-2.5">
           <div className="flex items-center gap-3">
             <Avatar className="size-9">
@@ -67,6 +71,7 @@ export default function AccountMenu() {
             </div>
           </div>
         </DropdownMenuLabel>
+        </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
 
@@ -87,13 +92,21 @@ export default function AccountMenu() {
 
         <DropdownMenuItem
           className="gap-2 px-3 py-2 text-sm text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]"
-          onSelect={(event) => {
-            event.preventDefault();
+          onClick={() => {
             handleLogout();
           }}
         >
           <LogOut className="h-4 w-4" />
           {busy ? "Logging out…" : "Log out"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-3 py-2 text-sm text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]"
+          onClick={() => {
+            handleLogout({ everywhere: true });
+          }}
+        >
+          <MonitorX className="h-4 w-4" />
+          Log out of all devices
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

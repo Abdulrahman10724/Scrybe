@@ -64,6 +64,10 @@ const createBullMQConnection = (role) => {
 // `role` can now be any unique string (e.g. "worker-audit", "worker-task")
 // so each worker gets its own dedicated connection instead of sharing one.
 const getBullMQConnection = (role = REDIS_ROLES.producer) => {
+  if (!config.REDIS_ENABLED) {
+    throw new Error("Background jobs are disabled (REDIS_ENABLED=false)");
+  }
+
   if (!connections.has(role)) {
     connections.set(role, createBullMQConnection(role));
   }

@@ -2,19 +2,25 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import IORedis from "ioredis";
 import { Server } from "socket.io";
 import config from "../config/env.config.js";
-import { findUserById, sanitizeUser } from "../models/user.model.js";
-import { verifyAccessToken } from "../utils/jwt.util.js";
+import { sanitizeUser } from "../models/user.model.js";
+import { resolveUserFromToken } from "../middleware/auth.middleware.js";
 import { assertWorkspaceAccess, assertWorkspaceEditAccess } from "../services/member.service.js";
 import { assertNodeAccess } from "../services/canvas-node.service.js";
 import logger from "../utils/logger.util.js";
+import { createSocketRateLimiter } from "./rate-limiter.js";
+import { nodeDataPatchSchemaFor, socketSchemas } from "../validation/node-data.schema.js";
+import { ObjectId } from "mongodb";
+import { getCollection } from "../config/db.config.js";
 import {
   registerChatHandlers,
   cleanupChatForSocket,
+  clearTypingForWorkspace,
 } from "./zonesChat.socket.js";
 import {
   findZoneAtPoint,
   updateUserZonePresence,
   removeUserFromAllZones,
+  clearWorkspaceZoneState,
 } from "../services/zone-presence.service.js";
 
 let io;
@@ -24,21 +30,39 @@ const presenceByWorkspace = new Map(); // workspaceId -> Map<userId, userInfo>
 
 const workspaceRoom = (workspaceId) => `workspace:${workspaceId}`;
 
+// Relay guard. Room membership is the source of truth for "may broadcast
+// to this workspace": it is set only after an access check on join and is
+// revoked (on every instance) when the member is removed or the workspace
+// is deleted. Mutating events additionally re-check the role in the DB.
+const isInWorkspaceRoom = (socket, workspaceId) =>
+  typeof workspaceId === "string" && socket.rooms.has(workspaceRoom(workspaceId));
+const userRoom = (userId) => `user:${userId}`;
+const channelRoomPrefix = (workspaceId) => `workspace:${workspaceId}:channel:`;
+
+// Inter-node message (via the Redis adapter's serverSideEmit) so every
+// backend instance drops its own in-memory state for a workspace.
+const LOCAL_CLEANUP_EVENT = "scrybe:workspace-local-cleanup";
+
+// Presence is per user, but a user can have several sockets (tabs/devices)
+// in the same workspace. Each entry tracks the user's socket ids and the
+// user only goes offline when the last one leaves.
 const emitWorkspacePresence = (workspaceId) => {
   const workspacePresence = presenceByWorkspace.get(workspaceId) || new Map();
-  const users = Array.from(workspacePresence.values());
+  const users = Array.from(workspacePresence.values(), ({ socketIds, ...user }) => user);
   io.to(workspaceRoom(workspaceId)).emit("workspace:presence", {
     workspaceId,
     users,
   });
 };
 
-const joinWorkspacePresence = (workspaceId, user) => {
+const joinWorkspacePresence = (workspaceId, user, socketId) => {
   if (!presenceByWorkspace.has(workspaceId)) {
     presenceByWorkspace.set(workspaceId, new Map());
   }
 
   const workspacePresence = presenceByWorkspace.get(workspaceId);
+  const socketIds = workspacePresence.get(user.id)?.socketIds || new Set();
+  socketIds.add(socketId);
   workspacePresence.set(user.id, {
     userId: user.id,
     name: user.name,
@@ -46,18 +70,38 @@ const joinWorkspacePresence = (workspaceId, user) => {
     avatarUrl: user.avatarUrl || null,
     online: true,
     lastSeenAt: new Date().toISOString(),
+    socketIds,
   });
 };
 
-const leaveWorkspacePresence = (workspaceId, userId) => {
+// Returns true when the user has no socket left in the workspace (and was
+// removed). socketId = null removes the user outright (access revoked).
+const leaveWorkspacePresence = (workspaceId, userId, socketId = null) => {
   const workspacePresence = presenceByWorkspace.get(workspaceId);
-  if (!workspacePresence) return;
+  if (!workspacePresence) return true;
+
+  const entry = workspacePresence.get(userId);
+  if (entry && socketId) {
+    entry.socketIds.delete(socketId);
+    if (entry.socketIds.size > 0) return false;
+  }
 
   workspacePresence.delete(userId);
 
   if (workspacePresence.size === 0) {
     presenceByWorkspace.delete(workspaceId);
   }
+  return true;
+};
+
+// One socket leaves a workspace: zone presence is only cleared when it was
+// the user's last socket there.
+const leaveWorkspaceForSocket = (socket, workspaceId) => {
+  const lastSocket = leaveWorkspacePresence(workspaceId, socket.user.id, socket.id);
+  if (lastSocket) {
+    removeUserFromAllZones(io, workspaceId, socket.user.id);
+  }
+  emitWorkspacePresence(workspaceId);
 };
 
 const cleanupSocketRooms = (socket) => {
@@ -68,13 +112,94 @@ const cleanupSocketRooms = (socket) => {
   }
 
   for (const workspaceId of meta.joinedWorkspaces) {
-    leaveWorkspacePresence(workspaceId, meta.user.id);
-    removeUserFromAllZones(io, workspaceId, meta.user.id);
-    emitWorkspacePresence(workspaceId);
+    leaveWorkspaceForSocket(socket, workspaceId);
     socket.leave(workspaceRoom(workspaceId));
   }
 
   socketMetaById.delete(socket.id);
+};
+
+// Makes this instance's sockets leave a workspace (and its channel rooms)
+// and forgets the related in-memory state. userId = null → everyone.
+const cleanupLocalWorkspaceState = ({ workspaceId, userId = null }) => {
+  if (!io || !workspaceId) return;
+
+  for (const [socketId, meta] of socketMetaById.entries()) {
+    if (!meta.joinedWorkspaces.has(workspaceId)) continue;
+    if (userId && meta.user.id !== userId) continue;
+
+    meta.joinedWorkspaces.delete(workspaceId);
+    const socket = io.sockets.sockets.get(socketId);
+    if (!socket) continue;
+
+    socket.leave(workspaceRoom(workspaceId));
+    for (const room of socket.rooms) {
+      if (room.startsWith(channelRoomPrefix(workspaceId))) socket.leave(room);
+    }
+  }
+
+  if (userId) {
+    leaveWorkspacePresence(workspaceId, userId);
+    removeUserFromAllZones(io, workspaceId, userId);
+    clearTypingForWorkspace(workspaceId, userId);
+    emitWorkspacePresence(workspaceId);
+  } else {
+    presenceByWorkspace.delete(workspaceId);
+    clearWorkspaceZoneState(workspaceId);
+    clearTypingForWorkspace(workspaceId);
+  }
+};
+
+const broadcastWorkspaceCleanup = (payload) => {
+  cleanupLocalWorkspaceState(payload);
+  if (!config.REDIS_ENABLED) return; // single instance: nothing to relay
+  try {
+    // Reaches the other backend instances through the Redis adapter.
+    io.serverSideEmit(LOCAL_CLEANUP_EVENT, payload);
+  } catch (error) {
+    logger.warn("serverSideEmit failed", { message: error?.message });
+  }
+};
+
+// Called after a member is removed: their sockets leave the workspace room
+// and every channel room (socketsLeave works across instances through the
+// Redis adapter), their presence/zone/typing state is dropped, and they are
+// told so the client can navigate away.
+const revokeWorkspaceAccess = async (workspaceId, userId) => {
+  if (!io || !workspaceId || !userId) return;
+
+  let channelRooms = [];
+  try {
+    const channels = await getCollection("channels")
+      .find({ workspaceId: new ObjectId(workspaceId) })
+      .project({ _id: 1 })
+      .toArray();
+    channelRooms = channels.map((channel) => `${channelRoomPrefix(workspaceId)}${channel._id.toString()}`);
+  } catch (error) {
+    logger.warn("revokeWorkspaceAccess: could not list channels", { message: error?.message });
+  }
+
+  io.in(userRoom(userId)).socketsLeave([workspaceRoom(workspaceId), ...channelRooms]);
+  broadcastWorkspaceCleanup({ workspaceId, userId });
+  io.to(userRoom(userId)).emit("workspace:access-revoked", { workspaceId });
+};
+
+const notifyRoleChanged = (workspaceId, userId, role) => {
+  if (!io || !workspaceId || !userId) return;
+  io.to(userRoom(userId)).emit("workspace:role-changed", { workspaceId, role });
+};
+
+// Called after a workspace and all of its data are deleted.
+const notifyWorkspaceDeleted = (workspaceId, memberUserIds = [], actorId = null) => {
+  if (!io || !workspaceId) return;
+
+  const payload = { workspaceId, actorId };
+  const rooms = [workspaceRoom(workspaceId), ...memberUserIds.map(userRoom)];
+  io.to(rooms).emit("workspace:deleted", payload);
+
+  // Cross-instance with the Redis adapter.
+  io.in(workspaceRoom(workspaceId)).socketsLeave(workspaceRoom(workspaceId));
+  broadcastWorkspaceCleanup({ workspaceId, userId: null });
 };
 
 const initSocket = (server) => {
@@ -86,46 +211,52 @@ const initSocket = (server) => {
     },
     pingTimeout: 60000,
   });
-   // Redis adapter: without this, presence/cursor/typing/zone events only
+  // Redis adapter: without this, presence/cursor/typing/zone events only
   // reach clients connected to the SAME backend instance. Required for any
   // horizontal scaling (multiple containers/replicas behind a load balancer).
-  const pubClient = new IORedis(config.REDIS_URL);
-  const subClient = pubClient.duplicate();
-  pubClient.on("error", (err) => logger.error(`Socket.IO Redis pub error: ${err.message}`));
-  subClient.on("error", (err) => logger.error(`Socket.IO Redis sub error: ${err.message}`));
-  io.adapter(createAdapter(pubClient, subClient));
-
+  if (config.REDIS_ENABLED) {
+    const pubClient = new IORedis(config.REDIS_URL);
+    const subClient = pubClient.duplicate();
+    pubClient.on("error", (err) => logger.error(`Socket.IO Redis pub error: ${err.message}`));
+    subClient.on("error", (err) => logger.error(`Socket.IO Redis sub error: ${err.message}`));
+    io.adapter(createAdapter(pubClient, subClient));
+  }
 
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth?.token;
+      const { user } = await resolveUserFromToken(socket.handshake.auth?.token);
 
-      if (!token) {
-        return next(new Error("Unauthorized"));
-      }
-
-      const decoded = verifyAccessToken(token);
-      if (!decoded?.id) {
-        return next(new Error("Unauthorized"));
-      }
-
-      const user = await findUserById(decoded.id);
-      if (!user) {
-        return next(new Error("Unauthorized"));
+      if (!user.emailVerified) {
+        return next(new Error("EMAIL_NOT_VERIFIED"));
       }
 
       socket.user = sanitizeUser(user);
       return next();
-    } catch (error) {
+    } catch {
       return next(new Error("Unauthorized"));
     }
   });
+
+  io.on(LOCAL_CLEANUP_EVENT, (payload) => cleanupLocalWorkspaceState(payload || {}));
 
   io.on("connection", async (socket) => {
     socketMetaById.set(socket.id, {
       user: socket.user,
       joinedWorkspaces: new Set(),
     });
+
+    // Token-bucket limits for high-frequency events (drop excess silently,
+    // disconnect sustained floods).
+    socket.use(
+      createSocketRateLimiter(socket, {
+        onAbuse: (abusive, eventName) =>
+          logger.warn("socket disconnected for flooding", { userId: abusive.user?.id, eventName }),
+      }),
+    );
+
+    // Per-user room so the server can reach every tab/device of a user
+    // (access revoked, role changed, workspace deleted).
+    socket.join(userRoom(socket.user.id));
 
     logger.info(`🔌 Socket connected: ${socket.id}`);
 
@@ -141,7 +272,7 @@ const initSocket = (server) => {
         const meta = socketMetaById.get(socket.id);
         meta?.joinedWorkspaces.add(workspaceId);
 
-        joinWorkspacePresence(workspaceId, socket.user);
+        joinWorkspacePresence(workspaceId, socket.user, socket.id);
         emitWorkspacePresence(workspaceId);
 
         ack?.({ success: true });
@@ -159,23 +290,21 @@ const initSocket = (server) => {
       const meta = socketMetaById.get(socket.id);
       meta?.joinedWorkspaces.delete(workspaceId);
 
-      leaveWorkspacePresence(workspaceId, socket.user.id);
-      removeUserFromAllZones(io, workspaceId, socket.user.id);
-      emitWorkspacePresence(workspaceId);
+      leaveWorkspaceForSocket(socket, workspaceId);
 
       socket.leave(workspaceRoom(workspaceId));
       ack?.({ success: true });
     });
 
-    socket.on("workspace:cursor", async ({ workspaceId, x, y } = {}) => {
-      if (!workspaceId || typeof x !== "number" || typeof y !== "number") {
-        return;
-      }
-
-      const meta = socketMetaById.get(socket.id);
-      if (!meta?.joinedWorkspaces.has(workspaceId)) {
-        return;
-      }
+    // Every relay below: rate limited (socket.use above), payload validated
+    // with the shared schemas (invalid → dropped, never broadcast), sender
+    // must be in the workspace room, and mutating events re-check node/edit
+    // permission in the database.
+    socket.on("workspace:cursor", async (payload = {}) => {
+      const parsed = socketSchemas.cursor.safeParse(payload);
+      if (!parsed.success) return;
+      const { workspaceId, x, y } = parsed.data;
+      if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
       socket.to(workspaceRoom(workspaceId)).emit("workspace:cursor", {
         workspaceId,
@@ -195,11 +324,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:drag", async ({ workspaceId, nodeId, x, y } = {}) => {
+    socket.on("canvas:drag", async (payload = {}) => {
       try {
-        if (!workspaceId || !nodeId || typeof x !== "number" || typeof y !== "number") {
-          return;
-        }
+        const parsed = socketSchemas.drag.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, nodeId, x, y } = parsed.data;
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
         await assertNodeAccess(workspaceId, socket.user.id, nodeId);
 
@@ -215,20 +345,23 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:resize", async ({ workspaceId, nodeId, x, y, data } = {}) => {
+    socket.on("canvas:resize", async (payload = {}) => {
       try {
-        if (!workspaceId || !nodeId || typeof x !== "number" || typeof y !== "number" || typeof data !== "object") {
-          return;
-        }
+        const { workspaceId, nodeId, x, y, data } = payload || {};
+        const position = socketSchemas.drag.safeParse({ workspaceId, nodeId, x, y });
+        if (!position.success || typeof data !== "object" || data === null) return;
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
-        await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const { existing } = await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const parsedData = nodeDataPatchSchemaFor(existing.type).safeParse(data);
+        if (!parsedData.success) return;
 
         socket.to(workspaceRoom(workspaceId)).emit("canvas:resize", {
           workspaceId,
           nodeId,
-          x,
-          y,
-          data,
+          x: position.data.x,
+          y: position.data.y,
+          data: parsedData.data,
           actorId: socket.user.id,
         });
       } catch {
@@ -236,19 +369,21 @@ const initSocket = (server) => {
       }
     });
 
-    //two new Handlers  and one rotation
     socket.on("canvas:data", async ({ workspaceId, nodeId, patch } = {}) => {
       try {
-        if (!workspaceId || !nodeId || typeof patch !== "object" || patch === null) {
+        if (typeof workspaceId !== "string" || typeof nodeId !== "string" || typeof patch !== "object" || patch === null) {
           return;
         }
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
-        await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const { existing } = await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const parsedPatch = nodeDataPatchSchemaFor(existing.type).safeParse(patch);
+        if (!parsedPatch.success) return;
 
         socket.to(workspaceRoom(workspaceId)).emit("canvas:data", {
           workspaceId,
           nodeId,
-          patch,
+          patch: parsedPatch.data,
           actorId: socket.user.id,
         });
       } catch {
@@ -256,11 +391,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:text", async ({ workspaceId, nodeId, value } = {}) => {
+    socket.on("canvas:text", async (payload = {}) => {
       try {
-        if (!workspaceId || !nodeId || typeof value !== "string") {
-          return;
-        }
+        const parsed = socketSchemas.text.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, nodeId, value } = parsed.data;
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
         await assertNodeAccess(workspaceId, socket.user.id, nodeId);
 
@@ -275,11 +411,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:rotate", async ({ workspaceId, nodeId, rotation } = {}) => {
+    socket.on("canvas:rotate", async (payload = {}) => {
       try {
-        if (!workspaceId || !nodeId || typeof rotation !== "number") {
-          return;
-        }
+        const parsed = socketSchemas.rotate.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, nodeId, rotation } = parsed.data;
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
         await assertNodeAccess(workspaceId, socket.user.id, nodeId);
 
@@ -294,11 +431,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:draft", async ({ workspaceId, draft } = {}) => {
+    socket.on("canvas:draft", async (payload = {}) => {
       try {
-        if (!workspaceId || typeof draft !== "object" || draft === null) {
-          return;
-        }
+        const parsed = socketSchemas.draft.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, draft } = parsed.data;
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
         await assertWorkspaceEditAccess(workspaceId, socket.user.id);
 
@@ -316,12 +454,7 @@ const initSocket = (server) => {
     registerChatHandlers(io, socket);
 
     socket.on("disconnect", (reason) => {
-      const meta = socketMetaById.get(socket.id);
-      if (meta?.joinedWorkspaces) {
-        for (const workspaceId of meta.joinedWorkspaces) {
-          removeUserFromAllZones(io, workspaceId, socket.user.id);
-        }
-      }
+      // Zone/workspace presence is released per socket (last tab wins).
       cleanupChatForSocket(socket);
       cleanupSocketRooms(socket);
       logger.info(`🔌 Socket disconnected: ${socket.id} | Reason: ${reason}`);
@@ -351,4 +484,10 @@ export {
   initSocket,
   getIO,
   emitWorkspaceEvent,
+  notifyWorkspaceDeleted,
+  revokeWorkspaceAccess,
+  notifyRoleChanged,
+  isInWorkspaceRoom,
+  workspaceRoom,
+  userRoom,
 };

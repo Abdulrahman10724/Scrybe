@@ -357,7 +357,7 @@ export default function HowItWorksSection() {
       color: "var(--highlight)",
       title: "AI reads intent silently",
       description:
-        "As your team types, Scrybe's AI classifies each note: Action Item, Decision, Open Question, or Reference — without interrupting your flow.",
+        "As your team types, Scrybe's AI classifies each note as an Action Item, Decision, Open Question or Information, and pulls out any links as References — without interrupting your flow.",
       visual: <AIScanVisual />,
     },
     {

@@ -1,9 +1,11 @@
+import config from "../config/env.config.js";
 import { Worker } from "bullmq";
 
 import { buildBullMQWorkerOptions, registerBullMQWorker } from "../config/bullmq.config.js";
 import { taskJobSchema } from "../jobs/task.job.js";
 import { TASK_QUEUE_NAME } from "../queues/task.queue.js";
 import { findNodeById } from "../models/canvas-node.model.js";
+import { findWorkspaceById } from "../models/workspace.model.js";
 import * as taskService from "../services/task.service.js";
 import logger from "../utils/logger.util.js";
 
@@ -13,6 +15,13 @@ let taskWorker;
 
 const processTaskJob = async (job) => {
   const payload = taskJobSchema.parse(job.data);
+
+  // A workspace deleted after the job was queued: nothing left to do, and
+  // retrying would only fail 5 times on "Workspace not found".
+  if (!(await findWorkspaceById(payload.workspaceId))) {
+    logger.info("task.worker: workspace deleted, job skipped", { jobId: job.id, workspaceId: payload.workspaceId });
+    return { skipped: "workspace-deleted" };
+  }
 
   if (payload.action === "delete") {
     await taskService.removeTaskForNode(payload.workspaceId, payload.nodeId, payload.actorId || null);
@@ -56,8 +65,11 @@ taskWorker = registerBullMQWorker(new Worker(TASK_QUEUE_NAME, processTaskJob, bu
   return taskWorker;
 };
 
-createTaskWorker();
+// Workers need Redis; the processor itself is exported for tests.
+if (config.REDIS_ENABLED) {
+  createTaskWorker();
+}
 
-export { createTaskWorker, TASK_WORKER_NAME };
+export { processTaskJob, createTaskWorker, TASK_WORKER_NAME };
 
 export default createTaskWorker;

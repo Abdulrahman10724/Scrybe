@@ -15,6 +15,8 @@ import MobileBottomNav from "../components/layout/MobileBottomNav";
 import {
   fetchWorkspaceById,
   clearActiveWorkspace,
+  removeWorkspaceLocally,
+  setActiveWorkspaceRole,
 } from "../redux/workspaceSlice";
 import {
   clearMembers,
@@ -106,6 +108,53 @@ export default function WorkspacePage() {
     on("member:removed", handleMemberRemoved);
     return () => {
       off("member:removed", handleMemberRemoved);
+    };
+  }, [currentUser?.id, dispatch, id, navigate, on, off]);
+
+  // Sent only to the affected user's sessions (per-user socket room).
+  useEffect(() => {
+    const handleAccessRevoked = (payload) => {
+      if (!payload?.workspaceId) return;
+      dispatch(removeWorkspaceLocally(payload.workspaceId));
+      if (payload.workspaceId !== id) return;
+
+      toast.error("You have been removed from this workspace.");
+      dispatch(clearActiveWorkspace());
+      dispatch(clearMembers());
+      navigate("/dashboard", { replace: true });
+    };
+
+    const handleRoleChanged = (payload) => {
+      if (!payload?.workspaceId || !payload?.role) return;
+      dispatch(setActiveWorkspaceRole(payload));
+      if (payload.workspaceId === id) {
+        toast.info(`Your role in this workspace is now ${payload.role}.`);
+      }
+    };
+
+    on("workspace:access-revoked", handleAccessRevoked);
+    on("workspace:role-changed", handleRoleChanged);
+    return () => {
+      off("workspace:access-revoked", handleAccessRevoked);
+      off("workspace:role-changed", handleRoleChanged);
+    };
+  }, [dispatch, id, navigate, on, off]);
+
+  useEffect(() => {
+    const handleWorkspaceDeleted = (payload) => {
+      if (!payload?.workspaceId) return;
+      dispatch(removeWorkspaceLocally(payload.workspaceId));
+      // The owner's own delete flow navigates away by itself.
+      if (payload.workspaceId !== id || payload.actorId === currentUser?.id) return;
+
+      toast.error("This workspace was deleted by its owner.");
+      dispatch(clearMembers());
+      navigate("/dashboard", { replace: true });
+    };
+
+    on("workspace:deleted", handleWorkspaceDeleted);
+    return () => {
+      off("workspace:deleted", handleWorkspaceDeleted);
     };
   }, [currentUser?.id, dispatch, id, navigate, on, off]);
 

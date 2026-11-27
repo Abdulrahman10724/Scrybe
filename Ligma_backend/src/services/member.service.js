@@ -1,3 +1,6 @@
+import { ObjectId } from "mongodb";
+
+import { getCollection } from "../config/db.config.js";
 import { findUserById } from "../models/user.model.js";
 import { findWorkspaceById, sanitizeWorkspace } from "../models/workspace.model.js";
 import {
@@ -293,6 +296,43 @@ const removeWorkspaceMember = async (workspaceId, targetUserId, requesterId) => 
   }
 
   await removeMember(workspaceId, targetUserId);
+  return detachUserFromWorkspaceContent(workspaceId, targetUserId);
+};
+
+// After removal the user must not linger in node permissions or own tasks.
+// Returns the touched node/task ids so the caller can broadcast updates.
+const detachUserFromWorkspaceContent = async (workspaceId, userId) => {
+  const workspaceFilter = { workspaceId: new ObjectId(workspaceId) };
+  const userIds = [userId, new ObjectId(userId)];
+
+  const nodes = getCollection("canvasNodes");
+  const affectedNodes = await nodes
+    .find({ ...workspaceFilter, allowedUserIds: { $in: userIds } })
+    .project({ _id: 1 })
+    .toArray();
+  if (affectedNodes.length) {
+    await nodes.updateMany(
+      { _id: { $in: affectedNodes.map((node) => node._id) } },
+      { $pull: { allowedUserIds: { $in: userIds } }, $set: { updatedAt: new Date() } },
+    );
+  }
+
+  const tasks = getCollection("tasks");
+  const affectedTasks = await tasks
+    .find({ ...workspaceFilter, assigneeId: { $in: userIds } })
+    .project({ _id: 1 })
+    .toArray();
+  if (affectedTasks.length) {
+    await tasks.updateMany(
+      { _id: { $in: affectedTasks.map((task) => task._id) } },
+      { $set: { assigneeId: null, updatedAt: new Date() } },
+    );
+  }
+
+  return {
+    nodeIds: affectedNodes.map((node) => node._id.toString()),
+    taskIds: affectedTasks.map((task) => task._id.toString()),
+  };
 };
 
 const listPendingInvitations = async (workspaceId, requesterId) => {

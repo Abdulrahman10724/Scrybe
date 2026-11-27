@@ -10,6 +10,7 @@ const getUsersCollection = () => getCollection(COLLECTION_NAME);
 const ensureUserIndexes = async () => {
   await getUsersCollection().createIndex({ email: 1 }, { unique: true });
   await getUsersCollection().createIndex({ emailVerificationTokenHash: 1 });
+  await getUsersCollection().createIndex({ passwordResetTokenHash: 1 }, { sparse: true });
 };
 
 const sanitizeUser = (user) => {
@@ -17,7 +18,16 @@ const sanitizeUser = (user) => {
     return null;
   }
 
-  const { password, ...safeUser } = user;
+  // Never expose secrets or internal token state to clients.
+  const {
+    password,
+    tokenVersion,
+    emailVerificationTokenHash,
+    emailVerificationExpiresAt,
+    passwordResetTokenHash,
+    passwordResetExpiresAt,
+    ...safeUser
+  } = user;
 
   return {
     ...safeUser,
@@ -38,6 +48,7 @@ const createUser = async ({ name, email, password }) => {
     email: email.trim().toLowerCase(),
     password,
     emailVerified: false,
+    tokenVersion: 0,
     emailVerificationTokenHash: null,
     emailVerificationExpiresAt: null,
     createdAt: now,
@@ -105,7 +116,72 @@ const markEmailVerified = async (userId) => {
   );
 };
 
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+const setPasswordResetToken = async (userId, token) => {
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+  await getUsersCollection().updateOne(
+    { _id: new ObjectId(userId) },
+    {
+      $set: {
+        passwordResetTokenHash: hashVerificationToken(token),
+        passwordResetExpiresAt: expiresAt,
+        updatedAt: new Date(),
+      },
+    },
+  );
+  return { expiresAt };
+};
+
+const findUserByPasswordResetToken = async (token) =>
+  getUsersCollection().findOne({ passwordResetTokenHash: hashVerificationToken(token) });
+
+// Single use: the token hash is matched and cleared in one atomic update, so
+// two concurrent resets with the same link can't both succeed. Also bumps
+// tokenVersion so every outstanding access token dies.
+const consumePasswordResetToken = async (token, hashedPassword) =>
+  getUsersCollection().findOneAndUpdate(
+    {
+      passwordResetTokenHash: hashVerificationToken(token),
+      passwordResetExpiresAt: { $gt: new Date() },
+    },
+    {
+      $set: {
+        password: hashedPassword,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        updatedAt: new Date(),
+      },
+      $inc: { tokenVersion: 1 },
+    },
+    { returnDocument: "after", includeResultMetadata: false },
+  );
+
+const clearPasswordResetToken = async (userId) =>
+  getUsersCollection().updateOne(
+    { _id: new ObjectId(userId) },
+    { $set: { passwordResetTokenHash: null, passwordResetExpiresAt: null, updatedAt: new Date() } },
+  );
+
+const getTokenVersion = (user) => (Number.isInteger(user?.tokenVersion) ? user.tokenVersion : 0);
+
+// Invalidates every access token issued so far for this user.
+const incrementTokenVersion = async (userId) => {
+  const updated = await getUsersCollection().findOneAndUpdate(
+    { _id: new ObjectId(userId) },
+    { $inc: { tokenVersion: 1 }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after", includeResultMetadata: false },
+  );
+  return getTokenVersion(updated);
+};
+
 export {
+  setPasswordResetToken,
+  findUserByPasswordResetToken,
+  consumePasswordResetToken,
+  clearPasswordResetToken,
+  getTokenVersion,
+  incrementTokenVersion,
   COLLECTION_NAME,
   ensureUserIndexes,
   sanitizeUser,

@@ -1,9 +1,11 @@
+import config from "../config/env.config.js";
 import { Worker } from "bullmq";
 
 import { buildBullMQWorkerOptions, registerBullMQWorker } from "../config/bullmq.config.js";
 import { emailJobSchema } from "../jobs/email.job.js";
 import { EMAIL_QUEUE_NAME } from "../queues/email.queue.js";
-import { sendInvitationEmail, sendVerificationEmail } from "../services/email.service.js";
+import { sendInvitationEmail, sendPasswordResetEmail, sendVerificationEmail } from "../services/email.service.js";
+import { findInvitationById } from "../models/invitation.model.js";
 import logger from "../utils/logger.util.js";
 
 const EMAIL_WORKER_NAME = "email-worker";
@@ -15,8 +17,22 @@ const processEmailJob = async (job) => {
 
   if (payload.type === "verification") {
     const result = await sendVerificationEmail({ to: payload.to, name: payload.name, token: payload.token });
-    logger.info("email.worker: verification email sent", { jobId: job.id, to: payload.to, skipped: Boolean(result?.skipped) });
+    logger.info("email.worker: verification email sent", { jobId: job.id, skipped: Boolean(result?.skipped) });
     return result;
+  }
+
+  if (payload.type === "password-reset") {
+    const result = await sendPasswordResetEmail({ to: payload.to, name: payload.name, token: payload.token });
+    logger.info("email.worker: password reset email sent", { jobId: job.id, skipped: Boolean(result?.skipped) });
+    return result;
+  }
+
+  // The workspace (and with it the invitation) may have been deleted, or
+  // the invitation revoked, while the job waited in the queue.
+  const invitation = await findInvitationById(payload.invitationId);
+  if (!invitation || invitation.status !== "Pending") {
+    logger.info("email.worker: invitation gone or no longer pending, email skipped", { jobId: job.id });
+    return { skipped: "invitation-inactive" };
   }
 
   const result = await sendInvitationEmail({
@@ -26,7 +42,7 @@ const processEmailJob = async (job) => {
     role: payload.role,
     inviteLink: payload.inviteLink,
   });
-  logger.info("email.worker: invitation email sent", { jobId: job.id, to: payload.to, skipped: Boolean(result?.skipped) });
+  logger.info("email.worker: invitation email sent", { jobId: job.id, skipped: Boolean(result?.skipped) });
   return result;
 };
 
@@ -44,8 +60,11 @@ emailWorker = registerBullMQWorker(new Worker(EMAIL_QUEUE_NAME, processEmailJob,
   return emailWorker;
 };
 
-createEmailWorker();
+// Workers need Redis; the processor itself is exported for tests.
+if (config.REDIS_ENABLED) {
+  createEmailWorker();
+}
 
-export { createEmailWorker, EMAIL_WORKER_NAME };
+export { processEmailJob, createEmailWorker, EMAIL_WORKER_NAME };
 
 export default createEmailWorker;

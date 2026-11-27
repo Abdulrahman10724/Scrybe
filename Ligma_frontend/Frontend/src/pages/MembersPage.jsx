@@ -79,10 +79,7 @@ function RoleSelect({ currentRole, isOwner, saving, onChangeRole }) {
           <DropdownMenuItem
             key={role}
             disabled={saving}
-            onSelect={(event) => {
-              event.preventDefault();
-              onChangeRole(role);
-            }}
+            onClick={() => onChangeRole(role)}
             className={
               role === currentRole
                 ? "font-semibold text-[color:var(--accent)]"

@@ -606,7 +606,7 @@ export default function HeroSection() {
             color: "var(--foreground-muted)",
           }}
         >
-          Free forever for solo use · No credit card required
+          Free to use · No credit card required
         </motion.p>
       </div>
 

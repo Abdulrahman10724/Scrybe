@@ -17,6 +17,7 @@ import {
   removeUserFromAllZones,
   getZonePresenceSnapshot,
 } from "../services/zone-presence.service.js";
+import { socketSchemas } from "../validation/node-data.schema.js";
 import { assertChannelVisible } from "../services/channel.service.js";
 import { findChannelById } from "../models/channel.model.js";
 let _io = null;
@@ -24,6 +25,11 @@ let _socket = null;
 
 // Tracks per-channel typing users: workspaceId -> channelId -> Map<userId, userInfo>
 const typingState = new Map();
+
+// Same relay guard as socket.service.js (kept local to avoid a circular
+// import): membership of the workspace room is revoked on member removal.
+const inWorkspaceRoom = (socket, workspaceId) =>
+  typeof workspaceId === "string" && socket.rooms.has(`workspace:${workspaceId}`);
 
 const roomForChannel = (workspaceId, channelId) => `workspace:${workspaceId}:channel:${channelId}`;
 
@@ -46,7 +52,8 @@ const registerChatHandlers = (io, socket) => {
 
   socket.on("workspace:zone-cursor", async ({ workspaceId, x, y } = {}) => {
     try {
-      if (!workspaceId || typeof x !== "number" || typeof y !== "number") return;
+      if (!socketSchemas.cursor.safeParse({ workspaceId, x, y }).success) return;
+      if (!inWorkspaceRoom(socket, workspaceId)) return;
       await assertWorkspaceAccess(workspaceId, socket.user.id);
       const zoneId = await findZoneAtPoint(workspaceId, { x, y });
       updateUserZonePresence(io, { workspaceId, user: socket.user, zoneId });
@@ -82,6 +89,7 @@ const registerChatHandlers = (io, socket) => {
   socket.on("chat:typing", async ({ workspaceId, channelId } = {}, ack) => {
     try {
       if (!workspaceId || !channelId) return;
+      if (!inWorkspaceRoom(socket, workspaceId)) return;
       await assertWorkspaceAccess(workspaceId, socket.user.id);
       if (!typingState.has(workspaceId)) typingState.set(workspaceId, new Map());
       const wsMap = typingState.get(workspaceId);
@@ -109,6 +117,7 @@ const registerChatHandlers = (io, socket) => {
   socket.on("chat:stopped-typing", async ({ workspaceId, channelId } = {}, ack) => {
     try {
       if (!workspaceId || !channelId) return;
+      if (!inWorkspaceRoom(socket, workspaceId)) return;
       const wsMap = typingState.get(workspaceId);
       wsMap?.get(channelId)?.delete(socket.user.id);
       if (wsMap?.get(channelId)?.size === 0) wsMap.delete(channelId);
@@ -124,6 +133,30 @@ const registerChatHandlers = (io, socket) => {
       ack?.({ success: false });
     }
   });
+};
+
+// Clears typing state for a whole workspace (userId omitted) or for one
+// user in it, telling the channel rooms that those users stopped typing.
+const clearTypingForWorkspace = (workspaceId, userId = null) => {
+  const channels = typingState.get(workspaceId);
+  if (!channels) return;
+
+  for (const [channelId, users] of channels.entries()) {
+    const removed = userId ? (users.delete(userId) ? [userId] : []) : Array.from(users.keys());
+    if (!userId) users.clear();
+    if (_io) {
+      for (const removedUserId of removed) {
+        _io.to(roomForChannel(workspaceId, channelId)).emit("chat:stopped-typing", {
+          workspaceId,
+          channelId,
+          userId: removedUserId,
+        });
+      }
+    }
+    if (users.size === 0) channels.delete(channelId);
+  }
+
+  if (channels.size === 0) typingState.delete(workspaceId);
 };
 
 const cleanupChatForSocket = (socket) => {
@@ -152,6 +185,7 @@ export {
   registerZoneCursorHandler,
   registerChatHandlers,
   cleanupChatForSocket,
+  clearTypingForWorkspace,
   emitZonePresence,
   roomForChannel,
   updateUserZonePresence,

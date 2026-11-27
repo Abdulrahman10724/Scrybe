@@ -86,6 +86,25 @@ const workspaceSlice = createSlice({
     clearActiveWorkspace(state) {
       state.activeWorkspace = null;
     },
+    // Live role change pushed by the server ("workspace:role-changed").
+    setActiveWorkspaceRole(state, action) {
+      const { workspaceId, role } = action.payload || {};
+      if (state.activeWorkspace?.id === workspaceId && role) {
+        state.activeWorkspace.currentUserRole = role;
+      }
+      for (const workspace of state.list || []) {
+        if (workspace.id === workspaceId && role) workspace.currentUserRole = role;
+      }
+    },
+    // Workspace deleted (or access lost) while the app was open.
+    removeWorkspaceLocally(state, action) {
+      const workspaceId = action.payload;
+      state.list = (state.list || []).filter((workspace) => workspace.id !== workspaceId);
+      state.hiddenList = (state.hiddenList || []).filter((workspace) => workspace.id !== workspaceId);
+      if (state.activeWorkspace?.id === workspaceId) {
+        state.activeWorkspace = null;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -190,6 +209,6 @@ const workspaceSlice = createSlice({
   },
 });
 
-export const { clearActiveWorkspace } = workspaceSlice.actions;
+export const { clearActiveWorkspace, removeWorkspaceLocally, setActiveWorkspaceRole } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;

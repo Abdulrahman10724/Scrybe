@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TASK_TYPES } from "../utils/task-categories.util.js";
+
 
 const idParamsSchema = z.object({
   params: z.object({
@@ -16,7 +18,7 @@ const createTaskSchema = z.object({
   dueDate: z.string().optional().nullable(),
   priority: z.enum(["Low", "Medium", "High", "Urgent"]).optional().nullable(),
   parentTaskId: z.string().optional().nullable(),
-  type: z.enum(["Action", "Decision", "Information", "Reference"]).optional().default("Action"),
+  type: z.enum(TASK_TYPES).optional().default("Action"),
   order: z.number().optional(), // ponytail: for manual sort persistence
 });
 

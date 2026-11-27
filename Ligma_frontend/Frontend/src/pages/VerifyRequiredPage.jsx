@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Mail, RefreshCw, Check, ArrowLeft, ShieldCheck, Inbox } from "lucide-react";
 import { BrandLockup } from "../components/ui/BrandMark";
-import { resendVerificationEmail, clearAuthState, bootstrapAuth } from "../redux/authSlice";
+import { resendVerificationEmail, clearAuthState, fetchCurrentUser, logoutUser } from "../redux/authSlice";
 
 const COOLDOWN_SECONDS = 30;
 
@@ -112,7 +112,8 @@ export default function VerifyRequiredPage() {
   useEffect(() => {
     if (!isAuthenticated || user?.emailVerified) return undefined;
     const interval = setInterval(() => {
-      dispatch(bootstrapAuth());
+      // /auth/me (allowed for unverified users) — no refresh-token rotation.
+      dispatch(fetchCurrentUser());
     }, 5000);
     return () => clearInterval(interval);
   }, [dispatch, isAuthenticated, user?.emailVerified]);
@@ -242,7 +243,9 @@ export default function VerifyRequiredPage() {
 
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
+                // Revoke the server-side session too, not just local state.
+                await dispatch(logoutUser());
                 dispatch(clearAuthState());
                 navigate("/login", { replace: true });
               }}

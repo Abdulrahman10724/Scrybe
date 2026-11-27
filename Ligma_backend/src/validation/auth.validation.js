@@ -19,9 +19,25 @@ const loginSchema = z.object({
   }),
 });
 
-export { registerSchema, loginSchema };
+const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+  }),
+});
+
+// Same password rules as registration.
+const resetPasswordSchema = z.object({
+  body: z.object({
+    token: z.string().trim().min(1, "Reset token is required").max(256, "Reset token is invalid"),
+    password: passwordSchema,
+  }),
+});
+
+export { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, passwordSchema };
 
 export default {
   registerSchema,
   loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

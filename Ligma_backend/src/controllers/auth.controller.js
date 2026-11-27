@@ -1,10 +1,31 @@
-import { register, login, verifyEmail, resendVerificationEmail } from "../services/auth.service.js";
+import {
+  register,
+  login,
+  verifyEmail,
+  resendVerificationEmail,
+  refreshSession,
+  logout,
+  logoutAll,
+  forgotPassword,
+  resetPassword,
+} from "../services/auth.service.js";
 import { sendSuccess } from "../utils/api-response.util.js";
 import { verifyAccessToken } from "../utils/jwt.util.js";
+import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from "../utils/auth-cookie.util.js";
+
+const requestContext = (req) => ({ userAgent: req.get("user-agent") || "" });
+
+const respondWithSession = (res, statusCode, message, session) => {
+  if (session.refreshToken) {
+    setRefreshCookie(res, session.refreshToken);
+  }
+  return sendSuccess(res, statusCode, message, session.payload);
+};
+
 const registerUser = async (req, res, next) => {
   try {
-    const result = await register(req.body);
-    return sendSuccess(res, 201, "Registration successful", result);
+    const session = await register(req.body, requestContext(req));
+    return respondWithSession(res, 201, "Registration successful", session);
   } catch (error) {
     return next(error);
   }
@@ -12,9 +33,21 @@ const registerUser = async (req, res, next) => {
 
 const loginUser = async (req, res, next) => {
   try {
-    const result = await login(req.body);
-    return sendSuccess(res, 200, "Login successful", result);
+    const session = await login(req.body, requestContext(req));
+    return respondWithSession(res, 200, "Login successful", session);
   } catch (error) {
+    return next(error);
+  }
+};
+
+// Exchanges the refresh cookie for a new access token and rotates the
+// cookie (single use).
+const refreshUser = async (req, res, next) => {
+  try {
+    const session = await refreshSession({ refreshToken: readRefreshCookie(req), ...requestContext(req) });
+    return respondWithSession(res, 200, "Session refreshed", session);
+  } catch (error) {
+    if (error.statusCode === 401) clearRefreshCookie(res);
     return next(error);
   }
 };
@@ -39,7 +72,11 @@ const resendVerificationEmailUser = async (req, res, next) => {
       const header = req.headers.authorization;
       if (header?.startsWith("Bearer ")) {
         try {
-          email = verifyAccessToken(header.split(" ")[1])?.email;
+          const decoded = verifyAccessToken(header.split(" ")[1]);
+          if (decoded?.id) {
+            const { findUserById } = await import("../models/user.model.js");
+            email = (await findUserById(decoded.id))?.email;
+          }
         } catch {
           /* invalid token: neeche "Email is required" aayega */
         }
@@ -53,15 +90,73 @@ const resendVerificationEmailUser = async (req, res, next) => {
   }
 };
 
-const logoutUser = async (req, res) => sendSuccess(res, 200, "Logout successful");
+// Revokes the current refresh-token session (this device) and clears the
+// cookie. Outstanding access tokens expire within ACCESS_TOKEN_TTL.
+const logoutUser = async (req, res, next) => {
+  try {
+    await logout({ refreshToken: readRefreshCookie(req) });
+    clearRefreshCookie(res);
+    return sendSuccess(res, 200, "Logout successful");
+  } catch (error) {
+    return next(error);
+  }
+};
 
-export { registerUser, loginUser, getMe, verifyEmailUser, resendVerificationEmailUser, logoutUser };
+// Revokes every session and bumps tokenVersion, so all access tokens on
+// every device stop working immediately.
+const logoutAllUser = async (req, res, next) => {
+  try {
+    await logoutAll(req.user.id);
+    clearRefreshCookie(res);
+    return sendSuccess(res, 200, "Logged out of all devices");
+  } catch (error) {
+    return next(error);
+  }
+};
 
-export default {
+const GENERIC_FORGOT_MESSAGE = "If an account exists for that email, we've sent a link to reset the password.";
+
+const forgotPasswordUser = async (req, res, next) => {
+  try {
+    await forgotPassword({ email: req.body.email });
+    return sendSuccess(res, 200, GENERIC_FORGOT_MESSAGE);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const resetPasswordUser = async (req, res, next) => {
+  try {
+    await resetPassword({ token: req.body.token, password: req.body.password });
+    clearRefreshCookie(res);
+    return sendSuccess(res, 200, "Your password has been reset. Please sign in with your new password.");
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export {
+  forgotPasswordUser,
+  resetPasswordUser,
   registerUser,
   loginUser,
+  refreshUser,
   getMe,
   verifyEmailUser,
   resendVerificationEmailUser,
   logoutUser,
+  logoutAllUser,
+};
+
+export default {
+  forgotPasswordUser,
+  resetPasswordUser,
+  registerUser,
+  loginUser,
+  refreshUser,
+  getMe,
+  verifyEmailUser,
+  resendVerificationEmailUser,
+  logoutUser,
+  logoutAllUser,
 };

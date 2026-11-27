@@ -6,9 +6,11 @@ import {
   findWorkspacesByOwner,
   sanitizeWorkspace,
   updateWorkspaceById,
-  deleteWorkspaceById,
 } from "../models/workspace.model.js";
-import { findMembershipsForUser } from "../models/workspace-member.model.js";
+import { findMembersByWorkspace, findMembershipsForUser } from "../models/workspace-member.model.js";
+import { purgeWorkspaceData } from "./workspace-purge.service.js";
+import { notifyWorkspaceDeleted } from "../socket/socket.service.js";
+import logger from "../utils/logger.util.js";
 import { seedChannelsForWorkspace } from "./channel.service.js";
 
 const listUserWorkspaces = async (ownerId, { includeHidden = false } = {}) => {
@@ -127,12 +129,22 @@ const deleteUserWorkspace = async (workspaceId, ownerId, confirmTitle) => {
     throw error;
   }
 
-  const result = await deleteWorkspaceById(workspaceId, ownerId);
-  if (!result.deletedCount) {
+  // Capture who belongs to the workspace before the membership rows go, so
+  // their dashboards can be told even if they aren't inside the workspace.
+  const memberUserIds = [
+    workspace.ownerId.toString(),
+    ...(await findMembersByWorkspace(workspaceId)).map((member) => member.userId.toString()),
+  ];
+
+  const counts = await purgeWorkspaceData(workspaceId);
+  if (!counts.workspaces) {
     const error = new Error("Workspace not found");
     error.statusCode = 404;
     throw error;
   }
+
+  logger.info("workspace deleted", { workspaceId, counts });
+  notifyWorkspaceDeleted(workspaceId, memberUserIds, ownerId);
 
   return { success: true };
 };

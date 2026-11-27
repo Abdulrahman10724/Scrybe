@@ -1,3 +1,4 @@
+import config from "../config/env.config.js";
 import { Worker } from "bullmq";
 import { toIsoString } from "../jobs/job.utils.js";
 
@@ -13,6 +14,7 @@ import {
   sanitizeCanvasNode,
   updateNode,
 } from "../models/canvas-node.model.js";
+import { findWorkspaceById } from "../models/workspace.model.js";
 import { appendEvent, EVENT_TYPES } from "../services/event-log.service.js";
 import { classifyNodeContent } from "../services/classification.service.js";
 import { getNodeText } from "../utils/node-text.util.js";
@@ -48,6 +50,15 @@ const buildTaskPayloadFromClassification = (
 
 const processClassificationJob = async (job) => {
   const payload = classificationJobSchema.parse(job.data);
+
+  if (!(await findWorkspaceById(payload.workspaceId))) {
+    logger.info("classification.worker: workspace deleted, job skipped", {
+      jobId: job.id,
+      workspaceId: payload.workspaceId,
+    });
+    return { skipped: "workspace-deleted" };
+  }
+
   const node = await findNodeById(payload.nodeId);
 
   if (!node) {
@@ -215,8 +226,11 @@ const createClassificationWorker = () => {
   return classificationWorker;
 };
 
-createClassificationWorker();
+// Workers need Redis; the processor itself is exported for tests.
+if (config.REDIS_ENABLED) {
+  createClassificationWorker();
+}
 
-export { createClassificationWorker, CLASSIFICATION_WORKER_NAME };
+export { processClassificationJob, createClassificationWorker, CLASSIFICATION_WORKER_NAME };
 
 export default createClassificationWorker;

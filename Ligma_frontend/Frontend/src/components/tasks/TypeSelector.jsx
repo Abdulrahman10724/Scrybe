@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { CheckSquare, GitBranch, Info, Link2, Check, ArrowLeftRight } from "lucide-react";
+import { CheckSquare, CircleHelp, GitBranch, Info, Link2, Check, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const TYPE_OPTIONS = [
   { value: "Action", label: "Action", Icon: CheckSquare, color: "text-[color:var(--primary)]" },
   { value: "Decision", label: "Decision", Icon: GitBranch, color: "text-[color:var(--secondary)]" },
+  { value: "Question", label: "Open Question", Icon: CircleHelp, color: "text-[color:var(--success)]" },
   { value: "Information", label: "Information", Icon: Info, color: "text-[color:var(--warning)]" },
   { value: "Reference", label: "Reference", Icon: Link2, color: "text-[color:var(--foreground-secondary)]" },
 ];
@@ -17,7 +18,7 @@ export function getTypeConfig(value) {
 const DROPDOWN_WIDTH = 180;
 
 // Lets a task be manually reassigned to a different category
-// (Action / Decision / Information / Reference) — e.g. correcting an
+// (Action / Decision / Question / Information / Reference) — e.g. correcting an
 // AI misclassification. Purely changes `task.type` via onChange; the
 // task then re-appears under whichever tab matches its new type.
 export function TypeSelector({ value, onChange, disabled, compact = false }) {

@@ -36,6 +36,14 @@ const getDb = () => {
 
 const getCollection = (collectionName) => getDb().collection(collectionName);
 
+const getClient = () => {
+  if (!client) {
+    throw new Error("Database not initialized. Call connectDB() first.");
+  }
+
+  return client;
+};
+
 const closeDB = async () => {
   if (!client) {
     return;
@@ -49,6 +57,6 @@ const closeDB = async () => {
   logger.info("🔌 MongoDB connection closed through app termination.");
 };
 
-export { connectDB, getDb, getCollection, closeDB };
+export { connectDB, getDb, getClient, getCollection, closeDB };
 
 export default connectDB;
