@@ -126,7 +126,7 @@ export default function FinalCTASection() {
           }}
         >
           <Sparkles size={11} />
-          Early access · Free forever for solo use
+          Early access · Free to use
         </motion.div>
 
         {/* Headline */}
