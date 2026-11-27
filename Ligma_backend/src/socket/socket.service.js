@@ -43,21 +43,26 @@ const channelRoomPrefix = (workspaceId) => `workspace:${workspaceId}:channel:`;
 // backend instance drops its own in-memory state for a workspace.
 const LOCAL_CLEANUP_EVENT = "scrybe:workspace-local-cleanup";
 
+// Presence is per user, but a user can have several sockets (tabs/devices)
+// in the same workspace. Each entry tracks the user's socket ids and the
+// user only goes offline when the last one leaves.
 const emitWorkspacePresence = (workspaceId) => {
   const workspacePresence = presenceByWorkspace.get(workspaceId) || new Map();
-  const users = Array.from(workspacePresence.values());
+  const users = Array.from(workspacePresence.values(), ({ socketIds, ...user }) => user);
   io.to(workspaceRoom(workspaceId)).emit("workspace:presence", {
     workspaceId,
     users,
   });
 };
 
-const joinWorkspacePresence = (workspaceId, user) => {
+const joinWorkspacePresence = (workspaceId, user, socketId) => {
   if (!presenceByWorkspace.has(workspaceId)) {
     presenceByWorkspace.set(workspaceId, new Map());
   }
 
   const workspacePresence = presenceByWorkspace.get(workspaceId);
+  const socketIds = workspacePresence.get(user.id)?.socketIds || new Set();
+  socketIds.add(socketId);
   workspacePresence.set(user.id, {
     userId: user.id,
     name: user.name,
@@ -65,18 +70,38 @@ const joinWorkspacePresence = (workspaceId, user) => {
     avatarUrl: user.avatarUrl || null,
     online: true,
     lastSeenAt: new Date().toISOString(),
+    socketIds,
   });
 };
 
-const leaveWorkspacePresence = (workspaceId, userId) => {
+// Returns true when the user has no socket left in the workspace (and was
+// removed). socketId = null removes the user outright (access revoked).
+const leaveWorkspacePresence = (workspaceId, userId, socketId = null) => {
   const workspacePresence = presenceByWorkspace.get(workspaceId);
-  if (!workspacePresence) return;
+  if (!workspacePresence) return true;
+
+  const entry = workspacePresence.get(userId);
+  if (entry && socketId) {
+    entry.socketIds.delete(socketId);
+    if (entry.socketIds.size > 0) return false;
+  }
 
   workspacePresence.delete(userId);
 
   if (workspacePresence.size === 0) {
     presenceByWorkspace.delete(workspaceId);
   }
+  return true;
+};
+
+// One socket leaves a workspace: zone presence is only cleared when it was
+// the user's last socket there.
+const leaveWorkspaceForSocket = (socket, workspaceId) => {
+  const lastSocket = leaveWorkspacePresence(workspaceId, socket.user.id, socket.id);
+  if (lastSocket) {
+    removeUserFromAllZones(io, workspaceId, socket.user.id);
+  }
+  emitWorkspacePresence(workspaceId);
 };
 
 const cleanupSocketRooms = (socket) => {
@@ -87,9 +112,7 @@ const cleanupSocketRooms = (socket) => {
   }
 
   for (const workspaceId of meta.joinedWorkspaces) {
-    leaveWorkspacePresence(workspaceId, meta.user.id);
-    removeUserFromAllZones(io, workspaceId, meta.user.id);
-    emitWorkspacePresence(workspaceId);
+    leaveWorkspaceForSocket(socket, workspaceId);
     socket.leave(workspaceRoom(workspaceId));
   }
 
@@ -249,7 +272,7 @@ const initSocket = (server) => {
         const meta = socketMetaById.get(socket.id);
         meta?.joinedWorkspaces.add(workspaceId);
 
-        joinWorkspacePresence(workspaceId, socket.user);
+        joinWorkspacePresence(workspaceId, socket.user, socket.id);
         emitWorkspacePresence(workspaceId);
 
         ack?.({ success: true });
@@ -267,9 +290,7 @@ const initSocket = (server) => {
       const meta = socketMetaById.get(socket.id);
       meta?.joinedWorkspaces.delete(workspaceId);
 
-      leaveWorkspacePresence(workspaceId, socket.user.id);
-      removeUserFromAllZones(io, workspaceId, socket.user.id);
-      emitWorkspacePresence(workspaceId);
+      leaveWorkspaceForSocket(socket, workspaceId);
 
       socket.leave(workspaceRoom(workspaceId));
       ack?.({ success: true });
@@ -433,12 +454,7 @@ const initSocket = (server) => {
     registerChatHandlers(io, socket);
 
     socket.on("disconnect", (reason) => {
-      const meta = socketMetaById.get(socket.id);
-      if (meta?.joinedWorkspaces) {
-        for (const workspaceId of meta.joinedWorkspaces) {
-          removeUserFromAllZones(io, workspaceId, socket.user.id);
-        }
-      }
+      // Zone/workspace presence is released per socket (last tab wins).
       cleanupChatForSocket(socket);
       cleanupSocketRooms(socket);
       logger.info(`🔌 Socket disconnected: ${socket.id} | Reason: ${reason}`);
