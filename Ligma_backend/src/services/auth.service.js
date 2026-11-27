@@ -80,13 +80,9 @@ const login = async ({ email, password }) => {
     throw error;
   }
 
-  if (!user.emailVerified) {
-    const error = new Error("Please verify your email before continuing.");
-    error.statusCode = 403;
-    error.code = "EMAIL_NOT_VERIFIED";
-    throw error;
-  }
-
+  // Unverified users still receive a session: it only unlocks /auth/me,
+  // resend/verify and logout (enforced server-side in auth.middleware.js and
+  // the Socket.IO handshake), which the verify-required screen needs.
   return buildAuthPayload(user);
 };
 

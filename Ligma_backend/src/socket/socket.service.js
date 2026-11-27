@@ -2,8 +2,8 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import IORedis from "ioredis";
 import { Server } from "socket.io";
 import config from "../config/env.config.js";
-import { findUserById, sanitizeUser } from "../models/user.model.js";
-import { verifyAccessToken } from "../utils/jwt.util.js";
+import { sanitizeUser } from "../models/user.model.js";
+import { resolveUserFromToken } from "../middleware/auth.middleware.js";
 import { assertWorkspaceAccess, assertWorkspaceEditAccess } from "../services/member.service.js";
 import { assertNodeAccess } from "../services/canvas-node.service.js";
 import logger from "../utils/logger.util.js";
@@ -99,25 +99,15 @@ const initSocket = (server) => {
 
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth?.token;
+      const { user } = await resolveUserFromToken(socket.handshake.auth?.token);
 
-      if (!token) {
-        return next(new Error("Unauthorized"));
-      }
-
-      const decoded = verifyAccessToken(token);
-      if (!decoded?.id) {
-        return next(new Error("Unauthorized"));
-      }
-
-      const user = await findUserById(decoded.id);
-      if (!user) {
-        return next(new Error("Unauthorized"));
+      if (!user.emailVerified) {
+        return next(new Error("EMAIL_NOT_VERIFIED"));
       }
 
       socket.user = sanitizeUser(user);
       return next();
-    } catch (error) {
+    } catch {
       return next(new Error("Unauthorized"));
     }
   });

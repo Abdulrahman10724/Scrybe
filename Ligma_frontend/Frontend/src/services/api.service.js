@@ -59,10 +59,23 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // Server-side email verification gate: any protected call made by an
+    // unverified account comes back 403 EMAIL_NOT_VERIFIED. Send the user to
+    // the verify screen (not /login — their session is still valid).
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === "EMAIL_NOT_VERIFIED" &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/verify-required"
+    ) {
+      window.location.assign("/verify-required");
+    }
+
     return Promise.reject({
       data: error.response?.data || error,
       status: error.response?.status,
       message: error.response?.data?.message || error.message,
+      code: error.response?.data?.code,
     });
   }
 );

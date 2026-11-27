@@ -1,7 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 
-import authMiddleware from "../middleware/auth.middleware.js";
+import { authAllowUnverified } from "../middleware/auth.middleware.js";
 import validate from "../middleware/validate.middleware.js";
 import authLimiter from "../middleware/rate-limit.middleware.js";
 import { loginSchema, registerSchema } from "../validation/auth.validation.js";
@@ -24,7 +24,9 @@ router.post("/register", authLimiter, validate(registerSchema), registerUser);
 router.post("/login", authLimiter, validate(loginSchema), loginUser);
 router.post("/verify-email", verifyEmailUser);
 router.post("/resend-verification", verificationResendLimiter, resendVerificationEmailUser);
-router.get("/me", authMiddleware, getMe);
+// /me stays reachable for unverified users so the verify-required screen
+// can poll for the verified flag; every other protected route rejects them.
+router.get("/me", authAllowUnverified, getMe);
 router.post("/logout", logoutUser);
 
 export default router;

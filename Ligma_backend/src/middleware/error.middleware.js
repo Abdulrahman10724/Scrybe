@@ -17,6 +17,12 @@ const errorHandler = (err, req, res, next) => {
     message,
   };
 
+  // Machine-readable error code (e.g. EMAIL_NOT_VERIFIED) for the client.
+  // Only string codes — driver errors carry numeric codes we don't expose.
+  if (typeof err.code === "string" && /^[A-Z][A-Z0-9_]+$/.test(err.code)) {
+    response.code = err.code;
+  }
+
   // Add validation errors or details if any
   if (err.errors) {
     response.errors = err.errors;

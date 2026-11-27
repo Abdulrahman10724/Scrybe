@@ -29,6 +29,15 @@ const INVITATION_BASE_URL = config.CLIENT_URL;
 
 const toTokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
+const assertVerifiedUser = (user) => {
+  if (!user?.emailVerified) {
+    const error = new Error("Please verify your email before accepting invitations.");
+    error.statusCode = 403;
+    error.code = "EMAIL_NOT_VERIFIED";
+    throw error;
+  }
+};
+
 const createInvitationLink = (token) => new URL(`/invite/${token}`, INVITATION_BASE_URL).toString();
 
 const assertWorkspaceOwner = async (workspaceId, userId) => {
@@ -193,6 +202,7 @@ const getInvitationByToken = async (token) => {
 };
 
 const acceptInvitation = async (token, user) => {
+  assertVerifiedUser(user);
   await ensureInvitationIndexes();
   await ensureWorkspaceMemberIndexes();
   await expirePendingInvitations();
@@ -246,6 +256,7 @@ const acceptInvitation = async (token, user) => {
 };
 
 const acceptInvitationById = async (invitationId, user) => {
+  assertVerifiedUser(user);
   await ensureInvitationIndexes();
   await ensureWorkspaceMemberIndexes();
   await expirePendingInvitations();
