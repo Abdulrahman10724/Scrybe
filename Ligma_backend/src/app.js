@@ -3,11 +3,12 @@ import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 import config from "./config/env.config.js";
 import { getBullMQHealth } from "./config/bullmq.config.js";
 import errorHandler from "./middleware/error.middleware.js";
+import { peerAddress } from "./utils/client-ip.util.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import invitationRoutes from "./routes/invitation.routes.js";
@@ -23,7 +24,8 @@ import chatRoutes from "./routes/chat.routes.js";
 // real server; tests mount the same app on an ephemeral port.
 const createApp = ({ isBackgroundJobsEnabled = () => false } = {}) => {
   const app = express();
-  app.set("trust proxy", 1);
+  // See src/utils/client-ip.util.js for why this is configurable.
+  app.set("trust proxy", config.TRUST_PROXY_HOPS);
 
   // Security & core middleware
   app.use(helmet());
@@ -48,6 +50,17 @@ const createApp = ({ isBackgroundJobsEnabled = () => false } = {}) => {
     statusCode: 429,
   });
   app.use(globalLimiter);
+
+  // Coarse limiter keyed on the address that connected to Render's edge,
+  // which a client can't forge with its own X-Forwarded-For header.
+  const peerLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: config.PEER_RATE_LIMIT_MAX,
+    keyGenerator: (req) => ipKeyGenerator(peerAddress(req)),
+    message: { success: false, message: "Too many requests, please try again later." },
+    statusCode: 429,
+  });
+  app.use(peerLimiter);
 
   // Health check
   app.get("/", (req, res) =>

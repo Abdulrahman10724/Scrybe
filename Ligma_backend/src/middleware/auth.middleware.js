@@ -1,6 +1,6 @@
 import { ObjectId } from "mongodb";
 
-import { findUserById, sanitizeUser } from "../models/user.model.js";
+import { findUserById, getTokenVersion, sanitizeUser } from "../models/user.model.js";
 import { verifyAccessToken } from "../utils/jwt.util.js";
 
 const httpError = (statusCode, message, code) => {
@@ -35,6 +35,12 @@ const resolveUserFromToken = async (token) => {
 
   if (!user) {
     throw httpError(401, "User not found");
+  }
+
+  // Revoked by logout-all / password reset / refresh-token reuse. Tokens
+  // minted before tokenVersion existed carry no "tv" and are rejected too.
+  if (decoded.tv !== getTokenVersion(user)) {
+    throw httpError(401, "Session has been revoked");
   }
 
   return { user, decoded };

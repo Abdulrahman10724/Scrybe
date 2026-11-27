@@ -5,7 +5,17 @@ import { authAllowUnverified } from "../middleware/auth.middleware.js";
 import validate from "../middleware/validate.middleware.js";
 import authLimiter from "../middleware/rate-limit.middleware.js";
 import { loginSchema, registerSchema } from "../validation/auth.validation.js";
-import { getMe, loginUser, logoutUser, registerUser, verifyEmailUser, resendVerificationEmailUser } from "../controllers/auth.controller.js";
+import requireTrustedOrigin from "../middleware/origin.middleware.js";
+import {
+  getMe,
+  loginUser,
+  logoutAllUser,
+  logoutUser,
+  refreshUser,
+  registerUser,
+  verifyEmailUser,
+  resendVerificationEmailUser,
+} from "../controllers/auth.controller.js";
 
 const router = Router();
 const verificationResendLimiter = rateLimit({
@@ -27,6 +37,9 @@ router.post("/resend-verification", verificationResendLimiter, resendVerificatio
 // /me stays reachable for unverified users so the verify-required screen
 // can poll for the verified flag; every other protected route rejects them.
 router.get("/me", authAllowUnverified, getMe);
-router.post("/logout", logoutUser);
+// Cookie-authenticated endpoints: Origin must be CLIENT_URL (CSRF guard).
+router.post("/refresh", requireTrustedOrigin, refreshUser);
+router.post("/logout", requireTrustedOrigin, logoutUser);
+router.post("/logout-all", requireTrustedOrigin, authAllowUnverified, logoutAllUser);
 
 export default router;

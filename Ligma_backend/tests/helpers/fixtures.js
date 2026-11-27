@@ -89,3 +89,17 @@ export const waitForEvent = (socket, event, ms = 500) =>
   });
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Pulls the raw refresh token out of a Set-Cookie header list.
+export const refreshCookieFrom = (setCookie = []) => {
+  const entry = setCookie.find((cookie) => cookie.startsWith("scrybe_rt="));
+  return entry ? entry.split(";")[0].slice("scrybe_rt=".length) : null;
+};
+
+// origin: undefined → CLIENT_URL, null → no Origin header, string → that origin.
+export const refreshRequest = (app, rawToken, origin) => {
+  const req = request(app).post("/api/v1/auth/refresh");
+  if (origin !== null) req.set("Origin", origin || CLIENT_URL);
+  if (rawToken) req.set("Cookie", `scrybe_rt=${rawToken}`);
+  return req.send();
+};

@@ -1,21 +1,40 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
+import { refreshSession } from "../services/api.service";
+import { getAccessToken, subscribeAccessToken } from "../services/token.store";
+
+// Socket.IO connects straight to the backend (not through the Vercel
+// rewrite) and authenticates with the in-memory access token.
 const socketUrl = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 let socketInstance = null;
+let unauthorizedRetryInFlight = false;
 const joinedWorkspaces = new Set();
 const workspaceRefCounts = new Map(); // workspaceId -> number of active consumers
 
+// Keep socket.auth in step with the token: refreshed tokens are used on the
+// next (re)connect; logout disconnects; a new login reconnects.
+subscribeAccessToken((token) => {
+  if (!socketInstance) return;
+  socketInstance.auth.token = token;
+  if (!token) {
+    socketInstance.disconnect();
+  } else if (!socketInstance.connected) {
+    socketInstance.connect();
+  }
+});
+
 const ensureSocket = () => {
-  const token = localStorage.getItem("Scrybe_token");
+  const token = getAccessToken();
 
   if (socketInstance) {
-    // Token badal gaya (login/logout/account switch) — socket ko naye
-    // token ke saath reconnect karo instead of stale identity use karte rehna.
     if (socketInstance.auth.token !== token) {
       socketInstance.auth.token = token;
-      socketInstance.disconnect().connect();
+    }
+    // Middleware rejections (e.g. expired token) don't auto-reconnect.
+    if (token && !socketInstance.connected && !socketInstance.active) {
+      socketInstance.connect();
     }
     return socketInstance;
   }
@@ -33,6 +52,25 @@ const ensureSocket = () => {
     const workspaceIds = Array.from(joinedWorkspaces);
     for (const workspaceId of workspaceIds) {
       socketInstance.emit("workspace:join", { workspaceId });
+    }
+  });
+
+  // The handshake rejected our access token (expired after 15 min, or
+  // revoked): refresh once and reconnect with the new token. The token
+  // subscription above performs the reconnect.
+  socketInstance.on("connect_error", async (error) => {
+    if (error?.message !== "Unauthorized" || unauthorizedRetryInFlight) return;
+    unauthorizedRetryInFlight = true;
+    try {
+      await refreshSession();
+      if (socketInstance && !socketInstance.connected) {
+        socketInstance.auth.token = getAccessToken();
+        socketInstance.connect();
+      }
+    } catch {
+      /* refresh failed — the API layer logs the user out */
+    } finally {
+      unauthorizedRetryInFlight = false;
     }
   });
 

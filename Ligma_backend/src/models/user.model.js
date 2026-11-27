@@ -17,7 +17,16 @@ const sanitizeUser = (user) => {
     return null;
   }
 
-  const { password, ...safeUser } = user;
+  // Never expose secrets or internal token state to clients.
+  const {
+    password,
+    tokenVersion,
+    emailVerificationTokenHash,
+    emailVerificationExpiresAt,
+    passwordResetTokenHash,
+    passwordResetExpiresAt,
+    ...safeUser
+  } = user;
 
   return {
     ...safeUser,
@@ -38,6 +47,7 @@ const createUser = async ({ name, email, password }) => {
     email: email.trim().toLowerCase(),
     password,
     emailVerified: false,
+    tokenVersion: 0,
     emailVerificationTokenHash: null,
     emailVerificationExpiresAt: null,
     createdAt: now,
@@ -105,7 +115,21 @@ const markEmailVerified = async (userId) => {
   );
 };
 
+const getTokenVersion = (user) => (Number.isInteger(user?.tokenVersion) ? user.tokenVersion : 0);
+
+// Invalidates every access token issued so far for this user.
+const incrementTokenVersion = async (userId) => {
+  const updated = await getUsersCollection().findOneAndUpdate(
+    { _id: new ObjectId(userId) },
+    { $inc: { tokenVersion: 1 }, $set: { updatedAt: new Date() } },
+    { returnDocument: "after", includeResultMetadata: false },
+  );
+  return getTokenVersion(updated);
+};
+
 export {
+  getTokenVersion,
+  incrementTokenVersion,
   COLLECTION_NAME,
   ensureUserIndexes,
   sanitizeUser,

@@ -10,7 +10,7 @@ import axios from "axios";
       console.error("no users found in db");
       process.exit(1);
     }
-    const token = signAccessToken({ id: user._id.toString(), email: user.email });
+    const token = signAccessToken({ id: user._id.toString(), tokenVersion: user.tokenVersion || 0 });
     console.log("Generated token for user:", user._id.toString());
 
     const workspaceId = process.argv[2] || "6a4cdde3ac668440045023a9";

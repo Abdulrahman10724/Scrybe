@@ -26,6 +26,7 @@ export const startHarness = async () => {
   process.env.REDIS_ENABLED = "false";
   process.env.LOG_LEVEL = process.env.LOG_LEVEL || "error";
   process.env.HEALTH_TOKEN = "health-test-token";
+  process.env.TRUST_PROXY_HOPS = "2"; // production topology: Vercel + Render
 
   const db = await import("../../src/config/db.config.js");
   await db.connectDB();

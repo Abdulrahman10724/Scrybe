@@ -1,13 +1,14 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 import authService from "../services/auth.service";
+import { setAccessToken } from "../services/token.store";
 
-const tokenKey = "Scrybe_token";
-
+// The access token lives in memory only (token.store + this slice); the
+// session is restored on boot from the httpOnly refresh cookie.
 const initialState = {
   user: null,
-  token: localStorage.getItem(tokenKey),
-  isAuthenticated: Boolean(localStorage.getItem(tokenKey)),
+  token: null,
+  isAuthenticated: false,
   loading: false,
   bootstrapping: true,
   error: null,
@@ -17,31 +18,46 @@ const initialState = {
 };
 
 const persistSession = (token) => {
-  if (token) {
-    localStorage.setItem(tokenKey, token);
-  } else {
-    localStorage.removeItem(tokenKey);
-  }
+  setAccessToken(token || null);
 };
 
 export const bootstrapAuth = createAsyncThunk("auth/bootstrap", async (_, { rejectWithValue }) => {
   try {
-    const token = localStorage.getItem(tokenKey);
-
-    if (!token) {
-      return { user: null, token: null };
-    }
-
-    return await authService.me();
+    // POST /auth/refresh rotates the refresh cookie and returns a fresh
+    // access token plus the user.
+    return await authService.refresh();
   } catch (error) {
     persistSession(null);
-    return rejectWithValue(error?.message || "Unable to restore session");
+    return rejectWithValue(error?.response?.data?.message || error?.message || "Unable to restore session");
+  }
+});
+
+// Re-reads the current user without touching the refresh token (used by the
+// verify-required screen to poll for emailVerified).
+export const fetchCurrentUser = createAsyncThunk("auth/fetchCurrentUser", async (_, { rejectWithValue }) => {
+  try {
+    return await authService.me();
+  } catch (error) {
+    return rejectWithValue(error?.message || "Unable to load the current user");
+  }
+});
+
+export const logoutAllDevices = createAsyncThunk("auth/logoutAll", async (_, { rejectWithValue }) => {
+  try {
+    await authService.logoutAll();
+    persistSession(null);
+    return null;
+  } catch (error) {
+    persistSession(null);
+    return rejectWithValue(error?.message || "Logout failed");
   }
 });
 
 export const loginUser = createAsyncThunk("auth/login", async (credentials, { rejectWithValue }) => {
   try {
-    return await authService.login(credentials);
+    const result = await authService.login(credentials);
+    persistSession(result?.data?.token);
+    return result;
   } catch (error) {
     return rejectWithValue({
       message: error?.message || error?.data?.message || "Login failed",
@@ -52,7 +68,9 @@ export const loginUser = createAsyncThunk("auth/login", async (credentials, { re
 
 export const registerUser = createAsyncThunk("auth/register", async (payload, { rejectWithValue }) => {
   try {
-    return await authService.register(payload);
+    const result = await authService.register(payload);
+    persistSession(result?.data?.token);
+    return result;
   } catch (error) {
     return rejectWithValue(error?.message || "Registration failed");
   }
@@ -93,12 +111,16 @@ export const logoutUser = createAsyncThunk("auth/logout", async (_, { rejectWith
 
 const setAuthenticatedUser = (state, payload) => {
   state.user = payload?.data?.user || null;
-  state.token = payload?.data?.token || localStorage.getItem(tokenKey);
+  state.token = payload?.data?.token || null;
   state.isAuthenticated = Boolean(state.user && state.token);
+};
 
-  if (state.token) {
-    persistSession(state.token);
-  }
+const resetSession = (state) => {
+  state.user = null;
+  state.token = null;
+  state.isAuthenticated = false;
+  state.loading = false;
+  state.error = null;
 };
 
 const authSlice = createSlice({
@@ -106,10 +128,12 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     clearAuthState(state) {
-      state.user = null;
-      state.token = null;
-      state.isAuthenticated = false;
-      state.error = null;
+      resetSession(state);
+      persistSession(null);
+    },
+    // Called when the refresh token is rejected mid-session.
+    sessionExpired(state) {
+      resetSession(state);
       persistSession(null);
     },
   },
@@ -121,15 +145,22 @@ const authSlice = createSlice({
       .addCase(bootstrapAuth.fulfilled, (state, action) => {
         state.bootstrapping = false;
 
+        if (action.payload?.data?.user && action.payload?.data?.token) {
+          setAuthenticatedUser(state, action.payload);
+        } else {
+          resetSession(state);
+        }
+      })
+      .addCase(fetchCurrentUser.fulfilled, (state, action) => {
         if (action.payload?.data?.user) {
           state.user = action.payload.data.user;
-          state.token = localStorage.getItem(tokenKey);
-          state.isAuthenticated = true;
-        } else {
-          state.user = null;
-          state.token = null;
-          state.isAuthenticated = false;
         }
+      })
+      .addCase(logoutAllDevices.fulfilled, (state) => {
+        resetSession(state);
+      })
+      .addCase(logoutAllDevices.rejected, (state) => {
+        resetSession(state);
       })
       .addCase(bootstrapAuth.rejected, (state) => {
         state.bootstrapping = false;
@@ -211,6 +242,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearAuthState } = authSlice.actions;
+export const { clearAuthState, sessionExpired } = authSlice.actions;
 
 export default authSlice.reducer;

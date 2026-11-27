@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { LogOut, UserCircle2 } from "lucide-react";
+import { LogOut, MonitorX, UserCircle2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import {
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import ThemeToggle from "../ui/ThemeToggle";
-import { logoutUser, clearAuthState } from "../../redux/authSlice";
+import { logoutUser, logoutAllDevices, clearAuthState } from "../../redux/authSlice";
 
 export default function AccountMenu() {
   const dispatch = useDispatch();
@@ -28,11 +28,11 @@ export default function AccountMenu() {
     .slice(0, 2)
     .toUpperCase();
 
-  const handleLogout = async () => {
+  const handleLogout = async ({ everywhere = false } = {}) => {
     if (busy) return;
     setBusy(true);
     try {
-      await dispatch(logoutUser()).unwrap();
+      await dispatch(everywhere ? logoutAllDevices() : logoutUser()).unwrap();
     } finally {
       dispatch(clearAuthState());
       navigate("/login", { replace: true });
@@ -94,6 +94,16 @@ export default function AccountMenu() {
         >
           <LogOut className="h-4 w-4" />
           {busy ? "Logging out…" : "Log out"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-3 py-2 text-sm text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)]"
+          onSelect={(event) => {
+            event.preventDefault();
+            handleLogout({ everywhere: true });
+          }}
+        >
+          <MonitorX className="h-4 w-4" />
+          Log out of all devices
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
