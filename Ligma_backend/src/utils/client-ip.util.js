@@ -17,7 +17,7 @@ import config from "../config/env.config.js";
 // X-Forwarded-For entry and pick its own req.ip. peerAddress() below is the
 // address that actually connected to Render's edge (Vercel or that client)
 // and cannot be forged; app.js applies a coarse limiter keyed on it.
-// GET /health/ip (HEALTH_TOKEN) shows the observed chain for calibration.
+// GET /api/v1/health/ip (HEALTH_TOKEN) shows the observed chain for calibration.
 
 const forwardedChain = (req) => {
   const forwarded = String(req.headers["x-forwarded-for"] || "")

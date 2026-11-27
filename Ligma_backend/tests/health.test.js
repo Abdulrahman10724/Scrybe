@@ -22,8 +22,8 @@ test("GET /health stays public and minimal", async () => {
   assert.deepEqual(res.body, { success: true, status: "healthy" });
 });
 
-test("GET /health/queues and /health/ip require X-Health-Token", async () => {
-  for (const path of ["/health/queues", "/health/ip"]) {
+test("GET /health/queues and /api/v1/health/ip require X-Health-Token", async () => {
+  for (const path of ["/health/queues", "/api/v1/health/ip"]) {
     assert.equal((await request(ctx.app).get(path)).status, 401, path);
     assert.equal((await request(ctx.app).get(path).set("X-Health-Token", "wrong")).status, 401, path);
     const ok = await request(ctx.app).get(path).set("X-Health-Token", process.env.HEALTH_TOKEN);
@@ -31,7 +31,7 @@ test("GET /health/queues and /health/ip require X-Health-Token", async () => {
   }
 
   const ip = await request(ctx.app)
-    .get("/health/ip")
+    .get("/api/v1/health/ip")
     .set("X-Health-Token", process.env.HEALTH_TOKEN)
     .set("X-Forwarded-For", "203.0.113.5");
   assert.equal(ip.body.ip, "203.0.113.5");

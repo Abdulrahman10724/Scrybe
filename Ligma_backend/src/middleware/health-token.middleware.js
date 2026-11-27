@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 import config from "../config/env.config.js";
 
-// Guards internal diagnostics. Send the token in the X-Health-Token header.
+// Guards internal diagnostics (/health/queues, /api/v1/health/ip). Send the token in the X-Health-Token header.
 // With HEALTH_TOKEN unset the endpoints are disabled (404), never open.
 const requireHealthToken = (req, res, next) => {
   const expected = config.HEALTH_TOKEN;

@@ -80,7 +80,8 @@ const createApp = ({ isBackgroundJobsEnabled = () => false } = {}) => {
     });
   });
   // Shows how the proxy chain resolves, to calibrate TRUST_PROXY_HOPS.
-  app.get("/health/ip", requireHealthToken, (req, res) => {
+  // Under /api/v1 so it can be reached through the Vercel rewrite too.
+  app.get("/api/v1/health/ip", requireHealthToken, (req, res) => {
     res.json({
       success: true,
       trustProxyHops: config.TRUST_PROXY_HOPS,
