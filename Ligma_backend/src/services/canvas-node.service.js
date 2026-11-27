@@ -21,6 +21,7 @@ import {
 import { appendEvent, EVENT_TYPES } from "./event-log.service.js";
 import logger from "../utils/logger.util.js";
 import { getNodeText } from "../utils/node-text.util.js";
+import { nodeDataPatchSchemaFor } from "../validation/node-data.schema.js";
 import { enqueueClassificationJob } from "../queues/classification.queue.js";
 import { enqueueTaskJob } from "../queues/task.queue.js";
 
@@ -171,6 +172,19 @@ const createCanvasNode = async (workspaceId, userId, payload) => {
 
 const updateCanvasNode = async (workspaceId, userId, nodeId, payload) => {
   const { existing } = await assertNodeAccess(workspaceId, userId, nodeId);
+
+  if (payload.data !== undefined) {
+    const parsed = nodeDataPatchSchemaFor(existing.type).safeParse(payload.data);
+    if (!parsed.success) {
+      const error = new Error("Validation Error");
+      error.statusCode = 400;
+      error.errors = parsed.error.issues.map((issue) => ({
+        field: ["data", ...issue.path].join("."),
+        message: issue.message,
+      }));
+      throw error;
+    }
+  }
 
   const allowedFields = ["x", "y", "data", "parentNodeId"];
   const updateFields = {};

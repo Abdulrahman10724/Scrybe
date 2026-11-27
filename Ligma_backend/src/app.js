@@ -35,8 +35,10 @@ const createApp = ({ isBackgroundJobsEnabled = () => false } = {}) => {
       credentials: true,
     })
   );
-  app.use(express.json({ limit: "4mb" }));
-  app.use(express.urlencoded({ extended: true }));
+  // Largest legitimate body is a canvas node (data capped at 32KB by
+  // node-data.schema.js); chat messages are 4,000 chars. 256kb leaves room.
+  app.use(express.json({ limit: "256kb" }));
+  app.use(express.urlencoded({ extended: true, limit: "256kb" }));
   app.use(cookieParser());
   if (config.NODE_ENV !== "test") {
     app.use(morgan(config.NODE_ENV === "development" ? "dev" : "combined"));

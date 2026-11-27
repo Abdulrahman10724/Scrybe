@@ -7,6 +7,8 @@ import { resolveUserFromToken } from "../middleware/auth.middleware.js";
 import { assertWorkspaceAccess, assertWorkspaceEditAccess } from "../services/member.service.js";
 import { assertNodeAccess } from "../services/canvas-node.service.js";
 import logger from "../utils/logger.util.js";
+import { createSocketRateLimiter } from "./rate-limiter.js";
+import { nodeDataPatchSchemaFor, socketSchemas } from "../validation/node-data.schema.js";
 import { ObjectId } from "mongodb";
 import { getCollection } from "../config/db.config.js";
 import {
@@ -220,6 +222,15 @@ const initSocket = (server) => {
       joinedWorkspaces: new Set(),
     });
 
+    // Token-bucket limits for high-frequency events (drop excess silently,
+    // disconnect sustained floods).
+    socket.use(
+      createSocketRateLimiter(socket, {
+        onAbuse: (abusive, eventName) =>
+          logger.warn("socket disconnected for flooding", { userId: abusive.user?.id, eventName }),
+      }),
+    );
+
     // Per-user room so the server can reach every tab/device of a user
     // (access revoked, role changed, workspace deleted).
     socket.join(userRoom(socket.user.id));
@@ -264,14 +275,15 @@ const initSocket = (server) => {
       ack?.({ success: true });
     });
 
-    socket.on("workspace:cursor", async ({ workspaceId, x, y } = {}) => {
-      if (!workspaceId || typeof x !== "number" || typeof y !== "number") {
-        return;
-      }
-
-      if (!isInWorkspaceRoom(socket, workspaceId)) {
-        return;
-      }
+    // Every relay below: rate limited (socket.use above), payload validated
+    // with the shared schemas (invalid → dropped, never broadcast), sender
+    // must be in the workspace room, and mutating events re-check node/edit
+    // permission in the database.
+    socket.on("workspace:cursor", async (payload = {}) => {
+      const parsed = socketSchemas.cursor.safeParse(payload);
+      if (!parsed.success) return;
+      const { workspaceId, x, y } = parsed.data;
+      if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
       socket.to(workspaceRoom(workspaceId)).emit("workspace:cursor", {
         workspaceId,
@@ -291,12 +303,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:drag", async ({ workspaceId, nodeId, x, y } = {}) => {
+    socket.on("canvas:drag", async (payload = {}) => {
       try {
+        const parsed = socketSchemas.drag.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, nodeId, x, y } = parsed.data;
         if (!isInWorkspaceRoom(socket, workspaceId)) return;
-        if (!workspaceId || !nodeId || typeof x !== "number" || typeof y !== "number") {
-          return;
-        }
 
         await assertNodeAccess(workspaceId, socket.user.id, nodeId);
 
@@ -312,21 +324,23 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:resize", async ({ workspaceId, nodeId, x, y, data } = {}) => {
+    socket.on("canvas:resize", async (payload = {}) => {
       try {
+        const { workspaceId, nodeId, x, y, data } = payload || {};
+        const position = socketSchemas.drag.safeParse({ workspaceId, nodeId, x, y });
+        if (!position.success || typeof data !== "object" || data === null) return;
         if (!isInWorkspaceRoom(socket, workspaceId)) return;
-        if (!workspaceId || !nodeId || typeof x !== "number" || typeof y !== "number" || typeof data !== "object") {
-          return;
-        }
 
-        await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const { existing } = await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const parsedData = nodeDataPatchSchemaFor(existing.type).safeParse(data);
+        if (!parsedData.success) return;
 
         socket.to(workspaceRoom(workspaceId)).emit("canvas:resize", {
           workspaceId,
           nodeId,
-          x,
-          y,
-          data,
+          x: position.data.x,
+          y: position.data.y,
+          data: parsedData.data,
           actorId: socket.user.id,
         });
       } catch {
@@ -334,20 +348,21 @@ const initSocket = (server) => {
       }
     });
 
-    //two new Handlers  and one rotation
     socket.on("canvas:data", async ({ workspaceId, nodeId, patch } = {}) => {
       try {
-        if (!isInWorkspaceRoom(socket, workspaceId)) return;
-        if (!workspaceId || !nodeId || typeof patch !== "object" || patch === null) {
+        if (typeof workspaceId !== "string" || typeof nodeId !== "string" || typeof patch !== "object" || patch === null) {
           return;
         }
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
 
-        await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const { existing } = await assertNodeAccess(workspaceId, socket.user.id, nodeId);
+        const parsedPatch = nodeDataPatchSchemaFor(existing.type).safeParse(patch);
+        if (!parsedPatch.success) return;
 
         socket.to(workspaceRoom(workspaceId)).emit("canvas:data", {
           workspaceId,
           nodeId,
-          patch,
+          patch: parsedPatch.data,
           actorId: socket.user.id,
         });
       } catch {
@@ -355,12 +370,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:text", async ({ workspaceId, nodeId, value } = {}) => {
+    socket.on("canvas:text", async (payload = {}) => {
       try {
+        const parsed = socketSchemas.text.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, nodeId, value } = parsed.data;
         if (!isInWorkspaceRoom(socket, workspaceId)) return;
-        if (!workspaceId || !nodeId || typeof value !== "string") {
-          return;
-        }
 
         await assertNodeAccess(workspaceId, socket.user.id, nodeId);
 
@@ -375,12 +390,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:rotate", async ({ workspaceId, nodeId, rotation } = {}) => {
+    socket.on("canvas:rotate", async (payload = {}) => {
       try {
+        const parsed = socketSchemas.rotate.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, nodeId, rotation } = parsed.data;
         if (!isInWorkspaceRoom(socket, workspaceId)) return;
-        if (!workspaceId || !nodeId || typeof rotation !== "number") {
-          return;
-        }
 
         await assertNodeAccess(workspaceId, socket.user.id, nodeId);
 
@@ -395,12 +410,12 @@ const initSocket = (server) => {
       }
     });
 
-    socket.on("canvas:draft", async ({ workspaceId, draft } = {}) => {
+    socket.on("canvas:draft", async (payload = {}) => {
       try {
+        const parsed = socketSchemas.draft.safeParse(payload);
+        if (!parsed.success) return;
+        const { workspaceId, draft } = parsed.data;
         if (!isInWorkspaceRoom(socket, workspaceId)) return;
-        if (!workspaceId || typeof draft !== "object" || draft === null) {
-          return;
-        }
 
         await assertWorkspaceEditAccess(workspaceId, socket.user.id);
 
