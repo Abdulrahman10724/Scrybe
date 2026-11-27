@@ -14,7 +14,9 @@ let baseUrl;
 let modules;
 
 export const startHarness = async () => {
-  replSet = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: "wiredTiger" } });
+  replSet = await MongoMemoryReplSet.create({ replSet: { count: 1, storageEngine: "wiredTiger" },
+    instanceOpts: [{ launchTimeout: 60000 }],
+  });
 
   process.env.NODE_ENV = "test";
   process.env.MONGODB_URI = replSet.getUri("scrybe_test");

@@ -7,6 +7,8 @@ import { resolveUserFromToken } from "../middleware/auth.middleware.js";
 import { assertWorkspaceAccess, assertWorkspaceEditAccess } from "../services/member.service.js";
 import { assertNodeAccess } from "../services/canvas-node.service.js";
 import logger from "../utils/logger.util.js";
+import { ObjectId } from "mongodb";
+import { getCollection } from "../config/db.config.js";
 import {
   registerChatHandlers,
   cleanupChatForSocket,
@@ -25,6 +27,13 @@ const socketMetaById = new Map();
 const presenceByWorkspace = new Map(); // workspaceId -> Map<userId, userInfo>
 
 const workspaceRoom = (workspaceId) => `workspace:${workspaceId}`;
+
+// Relay guard. Room membership is the source of truth for "may broadcast
+// to this workspace": it is set only after an access check on join and is
+// revoked (on every instance) when the member is removed or the workspace
+// is deleted. Mutating events additionally re-check the role in the DB.
+const isInWorkspaceRoom = (socket, workspaceId) =>
+  typeof workspaceId === "string" && socket.rooms.has(workspaceRoom(workspaceId));
 const userRoom = (userId) => `user:${userId}`;
 const channelRoomPrefix = (workspaceId) => `workspace:${workspaceId}:channel:`;
 
@@ -125,6 +134,34 @@ const broadcastWorkspaceCleanup = (payload) => {
   } catch (error) {
     logger.warn("serverSideEmit failed", { message: error?.message });
   }
+};
+
+// Called after a member is removed: their sockets leave the workspace room
+// and every channel room (socketsLeave works across instances through the
+// Redis adapter), their presence/zone/typing state is dropped, and they are
+// told so the client can navigate away.
+const revokeWorkspaceAccess = async (workspaceId, userId) => {
+  if (!io || !workspaceId || !userId) return;
+
+  let channelRooms = [];
+  try {
+    const channels = await getCollection("channels")
+      .find({ workspaceId: new ObjectId(workspaceId) })
+      .project({ _id: 1 })
+      .toArray();
+    channelRooms = channels.map((channel) => `${channelRoomPrefix(workspaceId)}${channel._id.toString()}`);
+  } catch (error) {
+    logger.warn("revokeWorkspaceAccess: could not list channels", { message: error?.message });
+  }
+
+  io.in(userRoom(userId)).socketsLeave([workspaceRoom(workspaceId), ...channelRooms]);
+  broadcastWorkspaceCleanup({ workspaceId, userId });
+  io.to(userRoom(userId)).emit("workspace:access-revoked", { workspaceId });
+};
+
+const notifyRoleChanged = (workspaceId, userId, role) => {
+  if (!io || !workspaceId || !userId) return;
+  io.to(userRoom(userId)).emit("workspace:role-changed", { workspaceId, role });
 };
 
 // Called after a workspace and all of its data are deleted.
@@ -232,8 +269,7 @@ const initSocket = (server) => {
         return;
       }
 
-      const meta = socketMetaById.get(socket.id);
-      if (!meta?.joinedWorkspaces.has(workspaceId)) {
+      if (!isInWorkspaceRoom(socket, workspaceId)) {
         return;
       }
 
@@ -257,6 +293,7 @@ const initSocket = (server) => {
 
     socket.on("canvas:drag", async ({ workspaceId, nodeId, x, y } = {}) => {
       try {
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
         if (!workspaceId || !nodeId || typeof x !== "number" || typeof y !== "number") {
           return;
         }
@@ -277,6 +314,7 @@ const initSocket = (server) => {
 
     socket.on("canvas:resize", async ({ workspaceId, nodeId, x, y, data } = {}) => {
       try {
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
         if (!workspaceId || !nodeId || typeof x !== "number" || typeof y !== "number" || typeof data !== "object") {
           return;
         }
@@ -299,6 +337,7 @@ const initSocket = (server) => {
     //two new Handlers  and one rotation
     socket.on("canvas:data", async ({ workspaceId, nodeId, patch } = {}) => {
       try {
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
         if (!workspaceId || !nodeId || typeof patch !== "object" || patch === null) {
           return;
         }
@@ -318,6 +357,7 @@ const initSocket = (server) => {
 
     socket.on("canvas:text", async ({ workspaceId, nodeId, value } = {}) => {
       try {
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
         if (!workspaceId || !nodeId || typeof value !== "string") {
           return;
         }
@@ -337,6 +377,7 @@ const initSocket = (server) => {
 
     socket.on("canvas:rotate", async ({ workspaceId, nodeId, rotation } = {}) => {
       try {
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
         if (!workspaceId || !nodeId || typeof rotation !== "number") {
           return;
         }
@@ -356,6 +397,7 @@ const initSocket = (server) => {
 
     socket.on("canvas:draft", async ({ workspaceId, draft } = {}) => {
       try {
+        if (!isInWorkspaceRoom(socket, workspaceId)) return;
         if (!workspaceId || typeof draft !== "object" || draft === null) {
           return;
         }
@@ -412,6 +454,9 @@ export {
   getIO,
   emitWorkspaceEvent,
   notifyWorkspaceDeleted,
+  revokeWorkspaceAccess,
+  notifyRoleChanged,
+  isInWorkspaceRoom,
   workspaceRoom,
   userRoom,
 };

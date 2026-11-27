@@ -25,6 +25,11 @@ let _socket = null;
 // Tracks per-channel typing users: workspaceId -> channelId -> Map<userId, userInfo>
 const typingState = new Map();
 
+// Same relay guard as socket.service.js (kept local to avoid a circular
+// import): membership of the workspace room is revoked on member removal.
+const inWorkspaceRoom = (socket, workspaceId) =>
+  typeof workspaceId === "string" && socket.rooms.has(`workspace:${workspaceId}`);
+
 const roomForChannel = (workspaceId, channelId) => `workspace:${workspaceId}:channel:${channelId}`;
 
 const emitZonePresence = (workspaceId) => {
@@ -47,6 +52,7 @@ const registerChatHandlers = (io, socket) => {
   socket.on("workspace:zone-cursor", async ({ workspaceId, x, y } = {}) => {
     try {
       if (!workspaceId || typeof x !== "number" || typeof y !== "number") return;
+      if (!inWorkspaceRoom(socket, workspaceId)) return;
       await assertWorkspaceAccess(workspaceId, socket.user.id);
       const zoneId = await findZoneAtPoint(workspaceId, { x, y });
       updateUserZonePresence(io, { workspaceId, user: socket.user, zoneId });
@@ -82,6 +88,7 @@ const registerChatHandlers = (io, socket) => {
   socket.on("chat:typing", async ({ workspaceId, channelId } = {}, ack) => {
     try {
       if (!workspaceId || !channelId) return;
+      if (!inWorkspaceRoom(socket, workspaceId)) return;
       await assertWorkspaceAccess(workspaceId, socket.user.id);
       if (!typingState.has(workspaceId)) typingState.set(workspaceId, new Map());
       const wsMap = typingState.get(workspaceId);
@@ -109,6 +116,7 @@ const registerChatHandlers = (io, socket) => {
   socket.on("chat:stopped-typing", async ({ workspaceId, channelId } = {}, ack) => {
     try {
       if (!workspaceId || !channelId) return;
+      if (!inWorkspaceRoom(socket, workspaceId)) return;
       const wsMap = typingState.get(workspaceId);
       wsMap?.get(channelId)?.delete(socket.user.id);
       if (wsMap?.get(channelId)?.size === 0) wsMap.delete(channelId);

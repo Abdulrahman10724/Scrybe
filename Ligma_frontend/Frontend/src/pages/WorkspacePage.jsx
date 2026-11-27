@@ -16,6 +16,7 @@ import {
   fetchWorkspaceById,
   clearActiveWorkspace,
   removeWorkspaceLocally,
+  setActiveWorkspaceRole,
 } from "../redux/workspaceSlice";
 import {
   clearMembers,
@@ -109,6 +110,35 @@ export default function WorkspacePage() {
       off("member:removed", handleMemberRemoved);
     };
   }, [currentUser?.id, dispatch, id, navigate, on, off]);
+
+  // Sent only to the affected user's sessions (per-user socket room).
+  useEffect(() => {
+    const handleAccessRevoked = (payload) => {
+      if (!payload?.workspaceId) return;
+      dispatch(removeWorkspaceLocally(payload.workspaceId));
+      if (payload.workspaceId !== id) return;
+
+      toast.error("You have been removed from this workspace.");
+      dispatch(clearActiveWorkspace());
+      dispatch(clearMembers());
+      navigate("/dashboard", { replace: true });
+    };
+
+    const handleRoleChanged = (payload) => {
+      if (!payload?.workspaceId || !payload?.role) return;
+      dispatch(setActiveWorkspaceRole(payload));
+      if (payload.workspaceId === id) {
+        toast.info(`Your role in this workspace is now ${payload.role}.`);
+      }
+    };
+
+    on("workspace:access-revoked", handleAccessRevoked);
+    on("workspace:role-changed", handleRoleChanged);
+    return () => {
+      off("workspace:access-revoked", handleAccessRevoked);
+      off("workspace:role-changed", handleRoleChanged);
+    };
+  }, [dispatch, id, navigate, on, off]);
 
   useEffect(() => {
     const handleWorkspaceDeleted = (payload) => {
