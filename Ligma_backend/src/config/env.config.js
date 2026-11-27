@@ -41,6 +41,14 @@ AUTH_RATE_LIMIT_MAX: z.string().transform((v) => parseInt(v, 10)).default("20"),
   // Defaults to the Docker Compose service name "redis"; falls back to localhost
   // for running the backend outside of Docker.
   REDIS_URL: z.string().default("redis://localhost:6379"),
+  // Set to "false" to run without Redis (tests / minimal local dev): BullMQ
+  // queues reject immediately instead of buffering, and Socket.IO uses the
+  // in-memory adapter (single instance only).
+  REDIS_ENABLED: z
+    .string()
+    .optional()
+    .default("true")
+    .transform((v) => v.toLowerCase() !== "false"),
 });
 const parsed = envSchema.safeParse(process.env);
 
