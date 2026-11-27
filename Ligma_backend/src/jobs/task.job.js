@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 import { buildStableJobId } from "./job.utils.js";
+import { TASK_TYPES } from "../utils/task-categories.util.js";
 
 const taskPayloadSchema = z.object({
   title: z.string().optional().default("") ,
   description: z.string().optional().default(""),
-  type: z.enum(["Action", "Decision", "Information", "Reference"]).optional().default("Action"),
+  type: z.enum(TASK_TYPES).optional().default("Action"),
   metadata: z.record(z.unknown()).optional().default({}),
   assigneeId: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
@@ -20,7 +21,7 @@ const taskJobSchema = z.object({
   actorId: z.string().regex(/^[a-f0-9]{24}$/i, "User ID is invalid").nullable(),
   action: z.enum(["upsert", "delete"]),
   nodeUpdatedAt: z.string().datetime().optional().nullable(),
-  classification: z.enum(["Action", "Decision", "Information", "Reference"]).nullable().optional(),
+  classification: z.enum(TASK_TYPES).nullable().optional(),
   taskData: taskPayloadSchema.optional().default({}),
 });
 

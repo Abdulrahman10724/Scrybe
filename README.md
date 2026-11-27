@@ -91,12 +91,15 @@ Create and arrange:
 
 ### 🤖 AI-Powered Understanding
 
-Scrybe analyzes canvas content and classifies it into:
+Scrybe's AI classifies each note's first line as one of:
 
 * **Action Item**
 * **Decision**
 * **Open Question**
-* **Reference**
+* **Information** (anything else worth keeping)
+
+Links and email addresses in a note are also extracted as **References**
+(pattern matching, not AI).
 
 </td>
 </tr>
@@ -217,16 +220,19 @@ flowchart LR
     C --> D["Action Item"]
     C --> E["Decision"]
     C --> F["Open Question"]
-    C --> G["Reference"]
+    C --> M["Information"]
+    A --> G["Links / emails (regex)"]
 
     D --> H["Create / Update Task"]
     E --> I["Store Decision Context"]
     F --> J["Keep Question Visible"]
+    M --> N["Keep as Context"]
     G --> K["Store as Reference"]
 
     H --> L["Workspace"]
     I --> L
     J --> L
+    N --> L
     K --> L
 ```
 
@@ -240,7 +246,9 @@ flowchart LR
 ├──────────────────┼─────────────────────────────────────┤
 │ OPEN QUESTION    │ Something that still needs clarity  │
 ├──────────────────┼─────────────────────────────────────┤
-│ REFERENCE        │ Useful contextual information       │
+│ INFORMATION      │ Context or notes (AI fallback)      │
+├──────────────────┼─────────────────────────────────────┤
+│ REFERENCE        │ Links/emails found by pattern match │
 └──────────────────┴─────────────────────────────────────┘
 ```
 

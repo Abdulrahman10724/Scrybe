@@ -34,7 +34,7 @@ const classifyNodeContent = async (rawText, { strict = false } = {}) => {
   }
 
   // Title = first line, Description = everything after — the description
-  // must NEVER influence which category (Action/Decision/Information) the
+  // must NEVER influence which category (Action/Decision/Question/Information) the
   // node lands in; only the title's intent decides the category.
   const { title, description } = parseTitleAndDescription(rawText);
 

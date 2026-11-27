@@ -2,18 +2,55 @@ import axios from "axios";
 import config from "../config/env.config.js";
 import logger from "../utils/logger.util.js";
 
+const CLASSIFIER_SYSTEM_PROMPT = [
+  "You classify short notes from a team brainstorming canvas.",
+  "Reply with exactly one word from this list and nothing else: Action, Decision, Question, Information.",
+  "Action: something someone needs to do (a task, a to-do, an assignment).",
+  "Decision: a choice that has been made or agreed.",
+  "Question: an open question the team still needs to answer.",
+  "Information: a fact, note or context that is none of the above.",
+].join("\n");
+
+const CATEGORY_BY_WORD = {
+  action: "Action",
+  decision: "Decision",
+  question: "Question",
+  information: "Information",
+  info: "Information",
+};
+
+// Robust to "**Question**", "question.", "Answer: Decision", "Action - ..."
+// and casing: the first recognised category word wins. Returns null when
+// the reply names no category.
+const parseClassification = (raw) => {
+  const words = String(raw || "")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!words.length) return null;
+  if (CATEGORY_BY_WORD[words[0]]) return CATEGORY_BY_WORD[words[0]];
+
+  // Tolerate a short lead-in such as "Category: Question" / "Answer - Action".
+  for (const word of words.slice(1, 4)) {
+    if (CATEGORY_BY_WORD[word]) return CATEGORY_BY_WORD[word];
+  }
+  return null;
+};
+
 const classifyWithOpenRouter = async (text, { strict = false } = {}) => {
   // Short-circuit when no API key is configured (development mode)
   if (!config.OPENROUTER_API_KEY) return null;
 
   const url = `${config.OPENROUTER_BASE_URL}${config.OPENROUTER_CHAT_ENDPOINT}`;
 
-  const system = {
-    role: "system",
-    content: "You are a classifier. Reply with exactly one word: Action, Decision, or Information.",
-  };
+  const system = { role: "system", content: CLASSIFIER_SYSTEM_PROMPT };
 
-  const user = { role: "user", content: `Classify the following text: \n\n${text}\n\nRespond only with one of: Action, Decision, Information` };
+  const user = {
+    role: "user",
+    content: `Classify the following text:\n\n${text}\n\nRespond only with one of: Action, Decision, Question, Information`,
+  };
 
   try {
     const resp = await axios.post(
@@ -44,9 +81,8 @@ const classifyWithOpenRouter = async (text, { strict = false } = {}) => {
     }
 
     const cleaned = textOut.trim();
-    if (/Action/i.test(cleaned)) return "Action";
-    if (/Decision/i.test(cleaned)) return "Decision";
-    if (/Information/i.test(cleaned)) return "Information";
+    const category = parseClassification(cleaned);
+    if (category) return category;
     if (strict) {
       throw new Error(`OpenRouter returned an unsupported classification: ${cleaned}`);
     }
@@ -106,6 +142,6 @@ const toFriendlyAiErrorMessage = (err) => {
   return "AI classification is currently unavailable. Please try again.";
 };
 
-export { classifyWithOpenRouter };
+export { classifyWithOpenRouter, parseClassification, CLASSIFIER_SYSTEM_PROMPT };
 
-export default { classifyWithOpenRouter };
+export default { classifyWithOpenRouter, parseClassification };

@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { CheckSquare, GitBranch, Info, Link2 } from "lucide-react";
+import { CheckSquare, GitBranch, Info, Link2, CircleHelp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   fetchTasks,
@@ -23,6 +23,7 @@ import useSocket from "../hooks/useSocket";
 import { TaskSection } from "../components/tasks/TaskSection";
 import { DecisionItem } from "../components/tasks/DecisionItem";
 import { InfoItem } from "../components/tasks/InfoItem";
+import { QuestionItem } from "../components/tasks/QuestionItem";
 import { ReferenceItem } from "../components/tasks/ReferenceItem";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -67,6 +68,16 @@ const TABS = [
     indicatorColor: "bg-[color:var(--secondary)]",
   },
   {
+    id: "Question",
+    label: "Open Questions",
+    icon: CircleHelp,
+    description: "Unanswered questions detected by AI",
+    accentColor: "text-[color:var(--success)]",
+    accentBg: "bg-[color:var(--success-soft)]",
+    accentBorder: "border-[color:var(--success)]/20",
+    indicatorColor: "bg-[color:var(--success)]",
+  },
+  {
     id: "Information",
     label: "Information",
     icon: Info,
@@ -88,7 +99,7 @@ const TABS = [
   },
 ];
 
-// ── FlatList (used for Decision / Information / Reference) ───────────────────
+// ── FlatList (used for Decision / Question / Information / Reference) ────────
 function FlatList({ tasks, members, EmptyIcon, emptyLabel, onChangeType }) {
   if (tasks.length === 0) {
     return (
@@ -104,6 +115,8 @@ function FlatList({ tasks, members, EmptyIcon, emptyLabel, onChangeType }) {
         {tasks.map((task) => {
           if (task.type === "Decision")
             return <DecisionItem key={task.id} task={task} members={members} onChangeType={onChangeType} />;
+          if (task.type === "Question")
+            return <QuestionItem key={task.id} task={task} members={members} onChangeType={onChangeType} />;
           if (task.type === "Information")
             return <InfoItem key={task.id} task={task} members={members} onChangeType={onChangeType} />;
           if (task.type === "Reference")
@@ -166,6 +179,7 @@ export default function TaskBoardPage() {
 
   // Flat lists per type
   const decisionTasks    = useMemo(() => allTasks.filter((t) => t.type === "Decision"),    [allTasks]);
+  const questionTasks    = useMemo(() => allTasks.filter((t) => t.type === "Question"),    [allTasks]);
   const informationTasks = useMemo(() => allTasks.filter((t) => t.type === "Information"), [allTasks]);
   // ponytail: include Reference-type tasks + synthetic entries from metadata.references of other tasks
   const referenceTasks = useMemo(() => {
@@ -304,6 +318,7 @@ export default function TaskBoardPage() {
             let count = 0;
             if (tab.id === "Action")      count = allTasks.filter((t) => t.type === "Action" || !t.type).length;
             if (tab.id === "Decision")    count = decisionTasks.length;
+            if (tab.id === "Question")    count = questionTasks.length;
             if (tab.id === "Information") count = informationTasks.length;
             if (tab.id === "Reference")   count = referenceTasks.length;
 
@@ -397,6 +412,17 @@ export default function TaskBoardPage() {
                 members={members}
                 EmptyIcon={GitBranch}
                 emptyLabel="No decisions captured yet"
+                onChangeType={handleChangeType}
+              />
+            )}
+
+            {/* ── Open questions ── */}
+            {activeTab === "Question" && (
+              <FlatList
+                tasks={questionTasks}
+                members={members}
+                EmptyIcon={CircleHelp}
+                emptyLabel="No open questions detected yet"
                 onChangeType={handleChangeType}
               />
             )}

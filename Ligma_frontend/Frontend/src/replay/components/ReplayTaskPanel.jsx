@@ -8,7 +8,7 @@
 
 import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
-import { CheckSquare, ChevronDown, GitBranch, Info, Link2 } from "lucide-react";
+import { CheckSquare, ChevronDown, GitBranch, Info, Link2, CircleHelp } from "lucide-react";
 
 import { selectReplayTasks } from "../replaySlice";
 
@@ -22,7 +22,9 @@ const STATUS_ACCENTS = {
 const TYPE_ICON = {
   Action: CheckSquare,
   Decision: GitBranch,
-  Info: Info,
+  Question: CircleHelp,
+  Information: Info,
+  Info: Info, // legacy label
   Reference: Link2,
 };
 
