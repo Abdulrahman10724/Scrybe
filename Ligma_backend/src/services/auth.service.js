@@ -40,6 +40,9 @@ import logger from "../utils/logger.util.js";
 // access token (but no new refresh token) instead of revoking everything.
 const ROTATION_GRACE_MS = 10 * 1000;
 
+const hashForLog = (value) =>
+  crypto.createHash("sha256").update(String(value || "").trim().toLowerCase()).digest("hex").slice(0, 12);
+
 const unauthorized = (message = "Session expired. Please sign in again.", code = "SESSION_INVALID") => {
   const error = new Error(message);
   error.statusCode = 401;
@@ -168,7 +171,9 @@ const login = async ({ email, password }, { userAgent } = {}) => {
   const user = await findUserByEmail(email);
 
   if (!user) {
-    logger.warn(`login: no user found for email="${email}"`);
+    // No raw email in logs: a short one-way hash still lets operators
+    // correlate repeated failures for the same address.
+    logger.warn("login: unknown account", { emailHash: hashForLog(email) });
     const error = new Error("Invalid email or password");
     error.statusCode = 401;
     throw error;
@@ -177,7 +182,7 @@ const login = async ({ email, password }, { userAgent } = {}) => {
   const passwordMatches = await bcrypt.compare(password, user.password);
 
   if (!passwordMatches) {
-    logger.warn(`login: password mismatch for userId=${user._id.toString()} email="${user.email}"`);
+    logger.warn("login: password mismatch", { userId: user._id.toString() });
     const error = new Error("Invalid email or password");
     error.statusCode = 401;
     throw error;

@@ -160,14 +160,13 @@ const sendVerificationEmail = async ({ to, name, token }) => {
       textContent: text,
     });
 
-    logger.info("Verification email sent via Brevo", { id: result?.messageId, to });
+    logger.info("Verification email sent via Brevo", { id: result?.messageId });
     return { success: true, id: result?.messageId };
   } catch (error) {
     logger.error("Failed to send verification email", {
       message: error?.message,
       status: error?.status,
       body: error?.response?.body || error?.response?.text,
-      to,
     });
         throw new Error("We couldn't send the verification email right now.");
   }
@@ -217,14 +216,13 @@ const sendInvitationEmail = async ({ to, inviterName, workspaceTitle, role, invi
       htmlContent: html,
       textContent: text,
     });
-    logger.info("Invitation email sent via Brevo", { id: result?.messageId, to });
+    logger.info("Invitation email sent via Brevo", { id: result?.messageId });
     return { success: true, id: result?.messageId };
   } catch (error) {
     logger.error("Failed to send invitation email", {
       message: error?.message,
       status: error?.status,
       body: error?.response?.body || error?.response?.text,
-      to,
     });
         throw new Error("We couldn't send the invitation email right now.");
   }

@@ -17,7 +17,7 @@ const processEmailJob = async (job) => {
 
   if (payload.type === "verification") {
     const result = await sendVerificationEmail({ to: payload.to, name: payload.name, token: payload.token });
-    logger.info("email.worker: verification email sent", { jobId: job.id, to: payload.to, skipped: Boolean(result?.skipped) });
+    logger.info("email.worker: verification email sent", { jobId: job.id, skipped: Boolean(result?.skipped) });
     return result;
   }
 
@@ -42,7 +42,7 @@ const processEmailJob = async (job) => {
     role: payload.role,
     inviteLink: payload.inviteLink,
   });
-  logger.info("email.worker: invitation email sent", { jobId: job.id, to: payload.to, skipped: Boolean(result?.skipped) });
+  logger.info("email.worker: invitation email sent", { jobId: job.id, skipped: Boolean(result?.skipped) });
   return result;
 };
 
