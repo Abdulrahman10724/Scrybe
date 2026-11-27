@@ -46,6 +46,9 @@ const envSchema = z.object({
     .optional()
     .default("20000")
     .transform((v) => Number.parseInt(v, 10) || 20000),
+  // Shared secret for GET /health/queues and /health/ip (X-Health-Token
+  // header). Leave empty to disable those endpoints.
+  HEALTH_TOKEN: z.string().optional().default(""),
   // Secure flag on the refresh cookie. Defaults to true in production.
   COOKIE_SECURE: z
     .string()

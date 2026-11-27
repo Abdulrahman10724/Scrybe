@@ -8,7 +8,8 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import config from "./config/env.config.js";
 import { getBullMQHealth } from "./config/bullmq.config.js";
 import errorHandler from "./middleware/error.middleware.js";
-import { peerAddress } from "./utils/client-ip.util.js";
+import { forwardedChain, peerAddress } from "./utils/client-ip.util.js";
+import { requireHealthToken } from "./middleware/health-token.middleware.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import invitationRoutes from "./routes/invitation.routes.js";
@@ -64,23 +65,28 @@ const createApp = ({ isBackgroundJobsEnabled = () => false } = {}) => {
   });
   app.use(peerLimiter);
 
-  // Health check
-  app.get("/", (req, res) =>
-    res.json({
-      success: true,
-      message: "Scrybe API is running",
-      version: "14.0",
-      env: config.NODE_ENV,
-    })
-  );
+  // Public health checks: status only, no environment or internals.
+  app.get("/", (req, res) => res.json({ status: "ok" }));
   app.get("/health", (req, res) => res.json({ success: true, status: "healthy" }));
-  app.get("/health/queues", (req, res) => {
+
+  // Internal diagnostics (X-Health-Token).
+  app.get("/health/queues", requireHealthToken, (req, res) => {
     const backgroundJobsEnabled = isBackgroundJobsEnabled();
     res.json({
       success: true,
       status: backgroundJobsEnabled ? "healthy" : "degraded",
       backgroundJobsEnabled,
       bullmq: getBullMQHealth(),
+    });
+  });
+  // Shows how the proxy chain resolves, to calibrate TRUST_PROXY_HOPS.
+  app.get("/health/ip", requireHealthToken, (req, res) => {
+    res.json({
+      success: true,
+      trustProxyHops: config.TRUST_PROXY_HOPS,
+      ip: req.ip,
+      peer: peerAddress(req),
+      chain: forwardedChain(req),
     });
   });
 
