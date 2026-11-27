@@ -126,6 +126,30 @@ const registerChatHandlers = (io, socket) => {
   });
 };
 
+// Clears typing state for a whole workspace (userId omitted) or for one
+// user in it, telling the channel rooms that those users stopped typing.
+const clearTypingForWorkspace = (workspaceId, userId = null) => {
+  const channels = typingState.get(workspaceId);
+  if (!channels) return;
+
+  for (const [channelId, users] of channels.entries()) {
+    const removed = userId ? (users.delete(userId) ? [userId] : []) : Array.from(users.keys());
+    if (!userId) users.clear();
+    if (_io) {
+      for (const removedUserId of removed) {
+        _io.to(roomForChannel(workspaceId, channelId)).emit("chat:stopped-typing", {
+          workspaceId,
+          channelId,
+          userId: removedUserId,
+        });
+      }
+    }
+    if (users.size === 0) channels.delete(channelId);
+  }
+
+  if (channels.size === 0) typingState.delete(workspaceId);
+};
+
 const cleanupChatForSocket = (socket) => {
   // Remove typing entries for this socket user.
   if (!socket.user) return;
@@ -152,6 +176,7 @@ export {
   registerZoneCursorHandler,
   registerChatHandlers,
   cleanupChatForSocket,
+  clearTypingForWorkspace,
   emitZonePresence,
   roomForChannel,
   updateUserZonePresence,

@@ -126,6 +126,13 @@ const removeUserFromAllZones = (io, workspaceId, userId) => {
   }
 };
 
+// Drops every in-memory zone record for a workspace (used on deletion).
+const clearWorkspaceZoneState = (workspaceId) => {
+  zonesCache.delete(workspaceId);
+  zonePresence.delete(workspaceId);
+  userCurrentZone.delete(workspaceId);
+};
+
 const getZonePresenceSnapshot = (workspaceId) => {
   const result = {};
   const byZone = zonePresence.get(workspaceId);
@@ -146,6 +153,7 @@ export {
   updateUserZonePresence,
   removeUserFromAllZones,
   getZonePresenceSnapshot,
+  clearWorkspaceZoneState,
 };
 
 export default {

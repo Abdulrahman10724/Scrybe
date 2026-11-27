@@ -10,11 +10,13 @@ import logger from "../utils/logger.util.js";
 import {
   registerChatHandlers,
   cleanupChatForSocket,
+  clearTypingForWorkspace,
 } from "./zonesChat.socket.js";
 import {
   findZoneAtPoint,
   updateUserZonePresence,
   removeUserFromAllZones,
+  clearWorkspaceZoneState,
 } from "../services/zone-presence.service.js";
 
 let io;
@@ -23,6 +25,12 @@ const socketMetaById = new Map();
 const presenceByWorkspace = new Map(); // workspaceId -> Map<userId, userInfo>
 
 const workspaceRoom = (workspaceId) => `workspace:${workspaceId}`;
+const userRoom = (userId) => `user:${userId}`;
+const channelRoomPrefix = (workspaceId) => `workspace:${workspaceId}:channel:`;
+
+// Inter-node message (via the Redis adapter's serverSideEmit) so every
+// backend instance drops its own in-memory state for a workspace.
+const LOCAL_CLEANUP_EVENT = "scrybe:workspace-local-cleanup";
 
 const emitWorkspacePresence = (workspaceId) => {
   const workspacePresence = presenceByWorkspace.get(workspaceId) || new Map();
@@ -77,6 +85,61 @@ const cleanupSocketRooms = (socket) => {
   socketMetaById.delete(socket.id);
 };
 
+// Makes this instance's sockets leave a workspace (and its channel rooms)
+// and forgets the related in-memory state. userId = null → everyone.
+const cleanupLocalWorkspaceState = ({ workspaceId, userId = null }) => {
+  if (!io || !workspaceId) return;
+
+  for (const [socketId, meta] of socketMetaById.entries()) {
+    if (!meta.joinedWorkspaces.has(workspaceId)) continue;
+    if (userId && meta.user.id !== userId) continue;
+
+    meta.joinedWorkspaces.delete(workspaceId);
+    const socket = io.sockets.sockets.get(socketId);
+    if (!socket) continue;
+
+    socket.leave(workspaceRoom(workspaceId));
+    for (const room of socket.rooms) {
+      if (room.startsWith(channelRoomPrefix(workspaceId))) socket.leave(room);
+    }
+  }
+
+  if (userId) {
+    leaveWorkspacePresence(workspaceId, userId);
+    removeUserFromAllZones(io, workspaceId, userId);
+    clearTypingForWorkspace(workspaceId, userId);
+    emitWorkspacePresence(workspaceId);
+  } else {
+    presenceByWorkspace.delete(workspaceId);
+    clearWorkspaceZoneState(workspaceId);
+    clearTypingForWorkspace(workspaceId);
+  }
+};
+
+const broadcastWorkspaceCleanup = (payload) => {
+  cleanupLocalWorkspaceState(payload);
+  if (!config.REDIS_ENABLED) return; // single instance: nothing to relay
+  try {
+    // Reaches the other backend instances through the Redis adapter.
+    io.serverSideEmit(LOCAL_CLEANUP_EVENT, payload);
+  } catch (error) {
+    logger.warn("serverSideEmit failed", { message: error?.message });
+  }
+};
+
+// Called after a workspace and all of its data are deleted.
+const notifyWorkspaceDeleted = (workspaceId, memberUserIds = [], actorId = null) => {
+  if (!io || !workspaceId) return;
+
+  const payload = { workspaceId, actorId };
+  const rooms = [workspaceRoom(workspaceId), ...memberUserIds.map(userRoom)];
+  io.to(rooms).emit("workspace:deleted", payload);
+
+  // Cross-instance with the Redis adapter.
+  io.in(workspaceRoom(workspaceId)).socketsLeave(workspaceRoom(workspaceId));
+  broadcastWorkspaceCleanup({ workspaceId, userId: null });
+};
+
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
@@ -112,11 +175,17 @@ const initSocket = (server) => {
     }
   });
 
+  io.on(LOCAL_CLEANUP_EVENT, (payload) => cleanupLocalWorkspaceState(payload || {}));
+
   io.on("connection", async (socket) => {
     socketMetaById.set(socket.id, {
       user: socket.user,
       joinedWorkspaces: new Set(),
     });
+
+    // Per-user room so the server can reach every tab/device of a user
+    // (access revoked, role changed, workspace deleted).
+    socket.join(userRoom(socket.user.id));
 
     logger.info(`🔌 Socket connected: ${socket.id}`);
 
@@ -342,4 +411,7 @@ export {
   initSocket,
   getIO,
   emitWorkspaceEvent,
+  notifyWorkspaceDeleted,
+  workspaceRoom,
+  userRoom,
 };

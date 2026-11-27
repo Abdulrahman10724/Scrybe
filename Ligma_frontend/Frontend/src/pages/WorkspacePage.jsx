@@ -15,6 +15,7 @@ import MobileBottomNav from "../components/layout/MobileBottomNav";
 import {
   fetchWorkspaceById,
   clearActiveWorkspace,
+  removeWorkspaceLocally,
 } from "../redux/workspaceSlice";
 import {
   clearMembers,
@@ -106,6 +107,24 @@ export default function WorkspacePage() {
     on("member:removed", handleMemberRemoved);
     return () => {
       off("member:removed", handleMemberRemoved);
+    };
+  }, [currentUser?.id, dispatch, id, navigate, on, off]);
+
+  useEffect(() => {
+    const handleWorkspaceDeleted = (payload) => {
+      if (!payload?.workspaceId) return;
+      dispatch(removeWorkspaceLocally(payload.workspaceId));
+      // The owner's own delete flow navigates away by itself.
+      if (payload.workspaceId !== id || payload.actorId === currentUser?.id) return;
+
+      toast.error("This workspace was deleted by its owner.");
+      dispatch(clearMembers());
+      navigate("/dashboard", { replace: true });
+    };
+
+    on("workspace:deleted", handleWorkspaceDeleted);
+    return () => {
+      off("workspace:deleted", handleWorkspaceDeleted);
     };
   }, [currentUser?.id, dispatch, id, navigate, on, off]);
 

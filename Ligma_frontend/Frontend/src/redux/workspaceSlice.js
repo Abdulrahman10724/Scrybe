@@ -86,6 +86,15 @@ const workspaceSlice = createSlice({
     clearActiveWorkspace(state) {
       state.activeWorkspace = null;
     },
+    // Workspace deleted (or access lost) while the app was open.
+    removeWorkspaceLocally(state, action) {
+      const workspaceId = action.payload;
+      state.list = (state.list || []).filter((workspace) => workspace.id !== workspaceId);
+      state.hiddenList = (state.hiddenList || []).filter((workspace) => workspace.id !== workspaceId);
+      if (state.activeWorkspace?.id === workspaceId) {
+        state.activeWorkspace = null;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -190,6 +199,6 @@ const workspaceSlice = createSlice({
   },
 });
 
-export const { clearActiveWorkspace } = workspaceSlice.actions;
+export const { clearActiveWorkspace, removeWorkspaceLocally } = workspaceSlice.actions;
 
 export default workspaceSlice.reducer;
