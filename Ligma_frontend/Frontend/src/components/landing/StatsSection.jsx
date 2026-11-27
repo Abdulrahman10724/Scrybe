@@ -1,47 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
+import { Bot, History, LockKeyhole, Users } from "lucide-react";
 
-const STATS = [
-  { value: 10000, suffix: "+", label: "Nodes replayed", description: "Across all sessions" },
-  { value: 3,     suffix: "×",  label: "Faster standups", description: "vs. traditional boards" },
-  { value: 98,    suffix: "%",  label: "Zero-ticket rate", description: "Tasks from AI, not clicks" },
-  { value: 0,     suffix: "",   label: "Manual Jira imports", description: "Ever needed" },
+// Product facts only (no usage numbers): each one is something the app
+// actually does today.
+const FACTS = [
+  { Icon: Users, label: "Real-time multiplayer", description: "Live cursors, presence and chat over WebSockets" },
+  { Icon: History, label: "Append-only audit log", description: "Every node and task change is recorded and replayable" },
+  { Icon: LockKeyhole, label: "Node-level permissions", description: "Leads lock nodes and choose who can edit them" },
+  { Icon: Bot, label: "AI task extraction", description: "Notes classified as Action Items become tasks" },
 ];
-
-function CountUp({ target, suffix, duration = 1400, startOnView = true }) {
-  const [count, setCount] = useState(0);
-  const prefersReducedMotion = useReducedMotion();
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-40px" });
-  const started = useRef(false);
-
-  useEffect(() => {
-    if ((!startOnView || inView) && !started.current) {
-      started.current = true;
-      if (prefersReducedMotion || target === 0) {
-        setCount(target);
-        return;
-      }
-      const startTime = performance.now();
-      const tick = (now) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        // ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        setCount(Math.round(eased * target));
-        if (progress < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    }
-  }, [inView, startOnView, target, duration, prefersReducedMotion]);
-
-  return (
-    <span ref={ref}>
-      {count.toLocaleString()}
-      {suffix}
-    </span>
-  );
-}
 
 export default function StatsSection() {
   const prefersReducedMotion = useReducedMotion();
@@ -64,7 +31,7 @@ export default function StatsSection() {
           transition={{ duration: 0.5 }}
           style={{ textAlign: "center", marginBottom: 52 }}
         >
-          <div className="section-eyebrow">By the numbers</div>
+          <div className="section-eyebrow">What you get</div>
           <h2
             style={{
               margin: "10px 0 0",
@@ -86,9 +53,9 @@ export default function StatsSection() {
             gap: 20,
           }}
         >
-          {STATS.map((stat, i) => (
+          {FACTS.map((fact, i) => (
             <motion.div
-              key={stat.label}
+              key={fact.label}
               initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
@@ -104,21 +71,24 @@ export default function StatsSection() {
             >
               <div
                 style={{
-                  fontSize: "clamp(32px, 4vw, 44px)",
-                  fontWeight: 800,
-                  letterSpacing: "-0.04em",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: "var(--primary-soft)",
                   color: "var(--primary)",
-                  lineHeight: 1,
-                  marginBottom: 10,
+                  marginBottom: 14,
                 }}
               >
-                <CountUp target={stat.value} suffix={stat.suffix} duration={1600} />
+                <fact.Icon size={22} strokeWidth={2} aria-hidden="true" />
               </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
-                {stat.label}
+                {fact.label}
               </div>
               <div style={{ fontSize: 12, color: "var(--foreground-muted)" }}>
-                {stat.description}
+                {fact.description}
               </div>
             </motion.div>
           ))}
