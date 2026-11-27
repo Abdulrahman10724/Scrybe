@@ -554,26 +554,26 @@ npm install
 
 ## 4. Configure environment variables
 
-### Backend
+Copy the examples and fill them in. Every variable is documented there.
 
-```env
-PORT=5000
-
-MONGODB_URI=your_mongodb_connection_string
-
-JWT_SECRET=your_jwt_secret
-
-OPENROUTER_API_KEY=your_openrouter_api_key
-
-REDIS_URL=your_redis_url
+```bash
+cp Ligma_backend/.env.example Ligma_backend/.env
+cp Ligma_frontend/Frontend/.env.example Ligma_frontend/Frontend/.env.local
 ```
 
-### Frontend
+In development the frontend calls the relative `/api/v1`, which the Vite
+dev server proxies to `http://localhost:5000` (see `vite.config.js`), so the
+refresh cookie behaves exactly as in production. Leave `VITE_API_URL` unset.
 
-```env
-VITE_API_URL=your_backend_url
-VITE_SOCKET_URL=your_backend_url
+## 5. Run the tests
+
+```bash
+cd Ligma_backend && npm test        # node:test + supertest + in-memory MongoDB
+cd Ligma_frontend/Frontend && npm run build
 ```
+
+The backend suite downloads a MongoDB binary on first run
+(`mongodb-memory-server`) and runs with `REDIS_ENABLED=false`.
 
 > Never commit `.env` files or API keys to the repository.
 
@@ -644,39 +644,138 @@ Current deployment architecture:
 
 # ✦ Security
 
-Scrybe's backend is designed around several security layers:
-
 ```text
 Request
    │
    ▼
-Authentication
+Access token (15 min JWT, in memory) ── tokenVersion check
    │
    ▼
-JWT Verification
+Email verified? ── 403 EMAIL_NOT_VERIFIED
    │
    ▼
-Workspace Membership
+Workspace membership (socket: workspace room)
    │
    ▼
-Role Permission
+Role permission ── Node permission
    │
    ▼
-Node Permission
-   │
-   ▼
-Controller / Service
+Payload validation (shared zod schemas) ── Controller / Service
 ```
 
-Key concepts include:
+### Sessions and tokens
 
-* JWT-based authentication
-* Password hashing with bcrypt
-* Workspace membership validation
-* Role-based permissions
-* Node-level access control
-* Environment-based secrets
-* Server-side authorization
+* **Access token**: a 15-minute JWT (`ACCESS_TOKEN_TTL`) that carries the
+  user's `tokenVersion` (`tv`). The frontend keeps it in memory only, never
+  in `localStorage`, and removes any leftover `Scrybe_token` on start.
+* **Refresh token**: a random 256-bit value in the httpOnly `scrybe_rt`
+  cookie (`SameSite=Lax`, `Path=/api/v1/auth`, `Secure` in production). Only
+  its sha256 hash is stored, in the `sessions` collection (30-day TTL).
+* `POST /auth/refresh` rotates the refresh token on every use. Replaying an
+  already-rotated token revokes all of the user's sessions and bumps
+  `tokenVersion`. A 10-second grace window covers two tabs refreshing at once.
+* `POST /auth/logout` revokes the current session; `POST /auth/logout-all`
+  revokes every session and bumps `tokenVersion`, so outstanding access
+  tokens on every device stop working at once. A password reset does the same.
+* `refresh`, `logout` and `logout-all` reject requests whose `Origin` is not
+  `CLIENT_URL` (CSRF).
+* **Why the Vercel rewrite**: the frontend (`vercel.app`) and the API
+  (`onrender.com`) are different sites, so browsers (Safari always, Chrome
+  increasingly) block the refresh cookie as third-party. `vercel.json`
+  rewrites `/api/v1/*` to Render, so the browser only ever talks to the
+  Vercel origin and the cookie is first-party. Socket.IO still connects
+  straight to Render and authenticates with the in-memory access token.
+
+### Accounts
+
+* Email verification is enforced server-side on every protected route and
+  in the Socket.IO handshake. Unverified users can only reach `/auth/me`,
+  verify/resend and logout.
+* Forgot/reset password: generic response (no account enumeration),
+  limited per IP and per email, single-use sha256-hashed token valid for 1 hour.
+* Passwords are hashed with bcrypt (cost 12). Logs carry user ids or email
+  hashes, never raw email addresses.
+
+### Workspaces and real-time
+
+* Removing a member immediately removes their sockets from the workspace and
+  channel rooms (on every instance via the Redis adapter), so they stop
+  receiving and sending events. Role changes are pushed live.
+* Deleting a workspace deletes all of its data in a MongoDB transaction and
+  moves connected members out.
+* Canvas node data and live socket payloads are validated against one
+  shared per-type schema (unknown keys rejected, sizes and lengths
+  bounded, data capped at 32KB). JSON bodies are limited to 256kb.
+* Per-socket token buckets limit realtime events (~60/s) and typing (~10/s);
+  persistent floods disconnect the socket.
+
+### Rate limiting behind the proxy
+
+REST requests now arrive Browser → Vercel → Render. With only Render
+trusted, `req.ip` would be Vercel's egress IP and every user would share a
+single rate-limit bucket. `TRUST_PROXY_HOPS=2` trusts both proxies so
+`req.ip` is the browser's IP again. A request sent straight to Render can
+still forge one `X-Forwarded-For` entry, so a second, generous limiter
+keys on the address that actually connected to Render, which a client
+can't forge. Check the result with `GET /api/v1/health/ip` (needs
+`X-Health-Token`).
+
+### Operational endpoints
+
+* `GET /` and `GET /health` are public and return only a status.
+* `GET /health/queues` and `GET /api/v1/health/ip` need the `X-Health-Token`
+  header (`HEALTH_TOKEN`). They are disabled when `HEALTH_TOKEN` is empty.
+
+---
+
+# ✦ Deploying this change
+
+> **Every user is logged out once after this deploy.** Old 1-day tokens have
+> no `tv` claim and are rejected, and the old `localStorage` token is deleted.
+> Users sign in once and then stay signed in through the refresh cookie.
+
+**Before deploying (recommended):** run the read-only key check against
+production so no stored canvas field gets rejected by the new strict schema:
+
+```bash
+cd Ligma_backend
+MONGODB_URI="<production uri>" node tools/sampleCanvasNodeKeys.js
+```
+
+It only reads. If it lists rejected keys, add them to
+`src/validation/node-data.schema.js` first.
+
+### Render (backend)
+
+Add or confirm these environment variables, then redeploy:
+
+| Variable | Value |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `CLIENT_URL` | `https://scrybe-flow.vercel.app` (exact origin, no trailing slash; also used for the CSRF Origin check) |
+| `HEALTH_TOKEN` | a new long random string |
+| `TRUST_PROXY_HOPS` | `2` |
+| `ACCESS_TOKEN_TTL` | `15m` |
+| `REFRESH_TOKEN_TTL_DAYS` | `30` |
+| `COOKIE_SECURE` | `true` (the default in production) |
+
+* `JWT_EXPIRES_IN` is no longer read and can be deleted. So can `RESEND_API_KEY`,
+  `EMAIL_FROM`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` and `GMAIL_REFRESH_TOKEN`.
+* The start command must be `npm start` (now `node index.js`) or
+  `node index.js`, not nodemon.
+* After deploying, check the proxy calibration through Vercel:
+  `curl -H "X-Health-Token: <token>" https://scrybe-flow.vercel.app/api/v1/health/ip`.
+  The `ip` field must be your own public IP. If it shows a Vercel or Render
+  address, adjust `TRUST_PROXY_HOPS` (the `chain` field shows every hop).
+
+### Vercel (frontend)
+
+* **Delete `VITE_API_URL`** (or set it to `/api/v1`). The app must call the
+  relative `/api/v1` so requests go through the rewrite in `vercel.json`.
+* Keep `VITE_SOCKET_URL=https://scrybe-backend-rsqb.onrender.com`.
+* Redeploy, so the new `vercel.json` rewrite and the rebuilt bundle go live together.
+* Preview deployments have a different origin than `CLIENT_URL`, so
+  `/auth/refresh` on a preview URL is refused (403) by design.
 
 ---
 
